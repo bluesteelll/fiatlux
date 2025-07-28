@@ -1,0 +1,13 @@
+{
+  "itemGroup.fiatlux": "Example Mod Tab",
+  "block.fiatlux.example_block": "Example Block",
+  "item.fiatlux.example_item": "Example Item",
+
+  "fiatlux.configuration.title": "Fiat Lux Configs",
+  "fiatlux.configuration.section.fiatlux.common.toml": "Fiat Lux Configs",
+  "fiatlux.configuration.section.fiatlux.common.toml.title": "Fiat Lux Configs",
+  "fiatlux.configuration.items": "Item List",
+  "fiatlux.configuration.logDirtBlock": "Log Dirt Block",
+  "fiatlux.configuration.magicNumberIntroduction": "Magic Number Text",
+  "fiatlux.configuration.magicNumber": "Magic Number"
+}
