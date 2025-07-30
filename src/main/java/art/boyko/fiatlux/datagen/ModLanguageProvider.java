@@ -14,8 +14,10 @@ public class ModLanguageProvider extends LanguageProvider {
 
     @Override
     protected void addTranslations() {
-        // Creative tab
+        // Creative tabs
         add("itemGroup.fiatlux", "Fiat Lux");
+        add("itemGroup.fiatlux.blocks", "Fiat Lux - Blocks");
+        add("itemGroup.fiatlux.tools", "Fiat Lux - Tools & Materials");
         
         // Blocks
         addBlock(ModBlocks.EXAMPLE_BLOCK, "Example Block");
@@ -45,5 +47,10 @@ public class ModLanguageProvider extends LanguageProvider {
         add("item.fiatlux.light_sword.tooltip", "A sword infused with pure light");
         add("item.fiatlux.compressed_coal.tooltip", "Burns 4 times longer than regular coal");
         add("block.fiatlux.light_block.tooltip", "Illuminates the darkness");
+        
+        // Creative tab descriptions
+        add("itemGroup.fiatlux.tooltip", "Main Fiat Lux items and blocks");
+        add("itemGroup.fiatlux.blocks.tooltip", "Decorative and functional blocks from Fiat Lux");
+        add("itemGroup.fiatlux.tools.tooltip", "Tools, weapons and crafting materials from Fiat Lux");
     }
 }
