@@ -32,6 +32,10 @@ public class ModCreativeTabs {
                 output.accept(ModItems.LIGHT_BLOCK_ITEM.get());
                 output.accept(ModItems.DECORATIVE_BLOCK_ITEM.get());
                 output.accept(ModItems.REINFORCED_BLOCK_ITEM.get());
+                
+                // Add new blocks with BlockEntity
+                output.accept(ModItems.SIMPLE_STORAGE_BLOCK_ITEM.get());
+                output.accept(ModItems.ENERGY_STORAGE_BLOCK_ITEM.get());
             }).build());
 
     // Alternative tab focused on blocks only 
@@ -46,6 +50,10 @@ public class ModCreativeTabs {
                 output.accept(ModItems.LIGHT_BLOCK_ITEM.get());
                 output.accept(ModItems.DECORATIVE_BLOCK_ITEM.get());
                 output.accept(ModItems.REINFORCED_BLOCK_ITEM.get());
+                
+                // Add new blocks with BlockEntity
+                output.accept(ModItems.SIMPLE_STORAGE_BLOCK_ITEM.get());
+                output.accept(ModItems.ENERGY_STORAGE_BLOCK_ITEM.get());
             }).build());
 
     // Alternative tab focused on tools and materials 

@@ -34,6 +34,11 @@ public class ModLootTableProvider extends LootTableProvider {
             dropSelf(ModBlocks.LIGHT_BLOCK.get());
             dropSelf(ModBlocks.DECORATIVE_BLOCK.get());
             dropSelf(ModBlocks.REINFORCED_BLOCK.get());
+            
+            // Blocks with BlockEntity that drop themselves
+            // Note: BlockEntity data is automatically preserved in item form
+            dropSelf(ModBlocks.SIMPLE_STORAGE_BLOCK.get());
+            dropSelf(ModBlocks.ENERGY_STORAGE_BLOCK.get());
         }
 
         @Override

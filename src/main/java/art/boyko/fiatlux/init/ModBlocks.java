@@ -1,6 +1,8 @@
 package art.boyko.fiatlux.init;
 
 import art.boyko.fiatlux.FiatLux;
+import art.boyko.fiatlux.custom.block.EnergyStorageBlock;
+import art.boyko.fiatlux.custom.block.SimpleStorageBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -48,6 +50,28 @@ public class ModBlocks {
             .strength(-1.0f, 3600000.0f)
             .sound(SoundType.NETHERITE_BLOCK)
             .pushReaction(PushReaction.BLOCK)
+    );
+
+    // Custom blocks with BlockEntity
+    // Simple storage block with BlockEntity
+    public static final DeferredBlock<SimpleStorageBlock> SIMPLE_STORAGE_BLOCK = BLOCKS.register("simple_storage_block",
+        () -> new SimpleStorageBlock(BlockBehaviour.Properties.of()
+            .mapColor(MapColor.WOOD)
+            .strength(2.0f, 3.0f)
+            .sound(SoundType.WOOD)
+            .requiresCorrectToolForDrops()
+        )
+    );
+
+    // Energy storage block with BlockEntity
+    public static final DeferredBlock<EnergyStorageBlock> ENERGY_STORAGE_BLOCK = BLOCKS.register("energy_storage_block",
+        () -> new EnergyStorageBlock(BlockBehaviour.Properties.of()
+            .mapColor(MapColor.METAL)
+            .strength(3.0f, 6.0f)
+            .sound(SoundType.METAL)
+            .requiresCorrectToolForDrops()
+            .lightLevel(state -> 8) // Slightly glowing
+        )
     );
 
     /**

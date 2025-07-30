@@ -21,13 +21,17 @@ public class ModBlockStateProvider extends BlockStateProvider {
         blockWithItem(ModBlocks.LIGHT_BLOCK);
         blockWithItem(ModBlocks.DECORATIVE_BLOCK);
         blockWithItem(ModBlocks.REINFORCED_BLOCK);
+        
+        // Custom blocks with BlockEntity
+        blockWithItem(ModBlocks.SIMPLE_STORAGE_BLOCK);
+        blockWithItem(ModBlocks.ENERGY_STORAGE_BLOCK);
     }
     
     /**
      * Creates a simple cube block model and blockstate
      * Also generates the block item model
      */
-    private void blockWithItem(DeferredBlock<Block> deferredBlock) {
+    private void blockWithItem(DeferredBlock<? extends Block> deferredBlock) {
         simpleBlockWithItem(deferredBlock.get(), cubeAll(deferredBlock.get()));
     }
 }

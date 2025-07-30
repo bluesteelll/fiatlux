@@ -113,5 +113,27 @@ public class ModRecipeProvider extends RecipeProvider {
                 .define('S', Items.STICK)
                 .unlockedBy("has_magic_gem", has(ModItems.MAGIC_GEM.get()))
                 .save(recipeOutput);
+
+        // New recipes for blocks with BlockEntity
+        // Simple storage block recipe
+        ShapedRecipeBuilder.shaped(RecipeCategory.BUILDING_BLOCKS, ModBlocks.SIMPLE_STORAGE_BLOCK.get())
+                .pattern("WWW")
+                .pattern("WCW")
+                .pattern("WWW")
+                .define('W', Items.OAK_PLANKS)
+                .define('C', Items.CHEST)
+                .unlockedBy("has_chest", has(Items.CHEST))
+                .save(recipeOutput);
+
+        // Energy storage block recipe
+        ShapedRecipeBuilder.shaped(RecipeCategory.BUILDING_BLOCKS, ModBlocks.ENERGY_STORAGE_BLOCK.get())
+                .pattern("RGR")
+                .pattern("GMG")
+                .pattern("RGR")
+                .define('R', Items.REDSTONE)
+                .define('G', Items.GOLD_INGOT)
+                .define('M', ModItems.MAGIC_GEM.get())
+                .unlockedBy("has_magic_gem", has(ModItems.MAGIC_GEM.get()))
+                .save(recipeOutput);
     }
 }

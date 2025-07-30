@@ -30,6 +30,13 @@ public class ModItems {
     public static final DeferredItem<BlockItem> REINFORCED_BLOCK_ITEM = 
         ITEMS.registerSimpleBlockItem("reinforced_block", ModBlocks.REINFORCED_BLOCK);
 
+    // Block items for custom blocks with BlockEntity
+    public static final DeferredItem<BlockItem> SIMPLE_STORAGE_BLOCK_ITEM = 
+        ITEMS.registerSimpleBlockItem("simple_storage_block", ModBlocks.SIMPLE_STORAGE_BLOCK);
+    
+    public static final DeferredItem<BlockItem> ENERGY_STORAGE_BLOCK_ITEM = 
+        ITEMS.registerSimpleBlockItem("energy_storage_block", ModBlocks.ENERGY_STORAGE_BLOCK);
+
     // Regular Items
     // Example food item
     public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.registerSimpleItem("example_item", 

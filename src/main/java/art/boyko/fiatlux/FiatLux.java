@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
+import art.boyko.fiatlux.init.ModBlockEntities;
 import art.boyko.fiatlux.init.ModBlocks;
 import art.boyko.fiatlux.init.ModCreativeTabs;
 import art.boyko.fiatlux.init.ModItems;
@@ -37,6 +38,7 @@ public class FiatLux {
         // Register all mod content
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
+        ModBlockEntities.register(modEventBus); // Register block entities
         ModCreativeTabs.register(modEventBus);
 
         // Note that this is necessary if and only if we want *this* class (FiatLux) to respond directly to events.
@@ -68,6 +70,9 @@ public class FiatLux {
             event.accept(ModItems.LIGHT_BLOCK_ITEM);
             event.accept(ModItems.DECORATIVE_BLOCK_ITEM);
             event.accept(ModItems.REINFORCED_BLOCK_ITEM);
+            // Add new blocks with BlockEntity
+            event.accept(ModItems.SIMPLE_STORAGE_BLOCK_ITEM);
+            event.accept(ModItems.ENERGY_STORAGE_BLOCK_ITEM);
         }
         
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {

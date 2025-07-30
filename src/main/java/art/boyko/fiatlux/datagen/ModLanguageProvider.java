@@ -25,6 +25,10 @@ public class ModLanguageProvider extends LanguageProvider {
         addBlock(ModBlocks.DECORATIVE_BLOCK, "Decorative Block");
         addBlock(ModBlocks.REINFORCED_BLOCK, "Reinforced Block");
         
+        // New blocks with BlockEntity
+        addBlock(ModBlocks.SIMPLE_STORAGE_BLOCK, "Simple Storage Block");
+        addBlock(ModBlocks.ENERGY_STORAGE_BLOCK, "Energy Storage Block");
+        
         // Items
         addItem(ModItems.EXAMPLE_ITEM, "Example Item");
         addItem(ModItems.MAGIC_GEM, "Magic Gem");
@@ -47,10 +51,20 @@ public class ModLanguageProvider extends LanguageProvider {
         add("item.fiatlux.light_sword.tooltip", "A sword infused with pure light");
         add("item.fiatlux.compressed_coal.tooltip", "Burns 4 times longer than regular coal");
         add("block.fiatlux.light_block.tooltip", "Illuminates the darkness");
+        add("block.fiatlux.simple_storage_block.tooltip", "Stores items in a simple way");
+        add("block.fiatlux.energy_storage_block.tooltip", "Stores and manages energy");
         
         // Creative tab descriptions
         add("itemGroup.fiatlux.tooltip", "Main Fiat Lux items and blocks");
         add("itemGroup.fiatlux.blocks.tooltip", "Decorative and functional blocks from Fiat Lux");
         add("itemGroup.fiatlux.tools.tooltip", "Tools, weapons and crafting materials from Fiat Lux");
+        
+        // BlockEntity related messages
+        add("message.fiatlux.simple_storage.stored_items", "Stored items: %d");
+        add("message.fiatlux.simple_storage.added_item", "Added item. New count: %d");
+        add("message.fiatlux.simple_storage.removed_item", "Removed item. New count: %d");
+        add("message.fiatlux.energy_storage.energy_info", "Energy: %d/%d FE");
+        add("message.fiatlux.energy_storage.extracted", "Extracted %d FE");
+        add("message.fiatlux.energy_storage.added", "Added %d FE");
     }
 }
