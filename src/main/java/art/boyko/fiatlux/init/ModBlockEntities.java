@@ -2,6 +2,7 @@ package art.boyko.fiatlux.init;
 
 import art.boyko.fiatlux.FiatLux;
 import art.boyko.fiatlux.custom.blockentity.EnergyStorageBlockEntity;
+import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
 import art.boyko.fiatlux.custom.blockentity.SimpleStorageBlockEntity;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -25,6 +26,12 @@ public class ModBlockEntities {
         BLOCK_ENTITIES.register("energy_storage_be", () -> 
             BlockEntityType.Builder.of(EnergyStorageBlockEntity::new, 
                 ModBlocks.ENERGY_STORAGE_BLOCK.get()).build(null));
+
+    // MechaGrid block entity
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MechaGridBlockEntity>> MECHA_GRID_BE = 
+        BLOCK_ENTITIES.register("mecha_grid_be", () -> 
+            BlockEntityType.Builder.of(MechaGridBlockEntity::new, 
+                ModBlocks.MECHA_GRID_BLOCK.get()).build(null));
 
     /**
      * Register all block entities to the event bus

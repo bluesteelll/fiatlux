@@ -37,6 +37,10 @@ public class ModItems {
     public static final DeferredItem<BlockItem> ENERGY_STORAGE_BLOCK_ITEM = 
         ITEMS.registerSimpleBlockItem("energy_storage_block", ModBlocks.ENERGY_STORAGE_BLOCK);
 
+    // MechaGrid block item
+    public static final DeferredItem<BlockItem> MECHA_GRID_BLOCK_ITEM = 
+        ITEMS.registerSimpleBlockItem("mecha_grid_block", ModBlocks.MECHA_GRID_BLOCK);
+
     // Regular Items
     // Example food item
     public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.registerSimpleItem("example_item", 

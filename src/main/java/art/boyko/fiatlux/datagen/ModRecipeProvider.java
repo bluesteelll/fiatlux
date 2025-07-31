@@ -15,7 +15,6 @@ import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.ItemLike;
 
 public class ModRecipeProvider extends RecipeProvider {
     
@@ -132,6 +131,17 @@ public class ModRecipeProvider extends RecipeProvider {
                 .pattern("RGR")
                 .define('R', Items.REDSTONE)
                 .define('G', Items.GOLD_INGOT)
+                .define('M', ModItems.MAGIC_GEM.get())
+                .unlockedBy("has_magic_gem", has(ModItems.MAGIC_GEM.get()))
+                .save(recipeOutput);
+
+        // MechaGrid block recipe - expensive but powerful
+        ShapedRecipeBuilder.shaped(RecipeCategory.BUILDING_BLOCKS, ModBlocks.MECHA_GRID_BLOCK.get())
+                .pattern("DGD")
+                .pattern("GMG")
+                .pattern("DGD")
+                .define('D', Items.DIAMOND)
+                .define('G', Items.GLASS)
                 .define('M', ModItems.MAGIC_GEM.get())
                 .unlockedBy("has_magic_gem", has(ModItems.MAGIC_GEM.get()))
                 .save(recipeOutput);

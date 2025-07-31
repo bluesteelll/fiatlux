@@ -7,6 +7,7 @@ import com.mojang.logging.LogUtils;
 import art.boyko.fiatlux.init.ModBlockEntities;
 import art.boyko.fiatlux.init.ModBlocks;
 import art.boyko.fiatlux.init.ModCreativeTabs;
+import art.boyko.fiatlux.init.ModDataComponents;
 import art.boyko.fiatlux.init.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -40,6 +41,7 @@ public class FiatLux {
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus); // Register block entities
         ModCreativeTabs.register(modEventBus);
+        ModDataComponents.register(modEventBus); // Register data components
 
         // Note that this is necessary if and only if we want *this* class (FiatLux) to respond directly to events.
         NeoForge.EVENT_BUS.register(this);
@@ -73,6 +75,8 @@ public class FiatLux {
             // Add new blocks with BlockEntity
             event.accept(ModItems.SIMPLE_STORAGE_BLOCK_ITEM);
             event.accept(ModItems.ENERGY_STORAGE_BLOCK_ITEM);
+            // Add MechaGrid block
+            event.accept(ModItems.MECHA_GRID_BLOCK_ITEM);
         }
         
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {

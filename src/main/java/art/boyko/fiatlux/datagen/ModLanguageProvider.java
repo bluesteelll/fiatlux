@@ -29,6 +29,9 @@ public class ModLanguageProvider extends LanguageProvider {
         addBlock(ModBlocks.SIMPLE_STORAGE_BLOCK, "Simple Storage Block");
         addBlock(ModBlocks.ENERGY_STORAGE_BLOCK, "Energy Storage Block");
         
+        // MechaGrid block
+        addBlock(ModBlocks.MECHA_GRID_BLOCK, "MechaGrid Block");
+        
         // Items
         addItem(ModItems.EXAMPLE_ITEM, "Example Item");
         addItem(ModItems.MAGIC_GEM, "Magic Gem");
@@ -53,6 +56,7 @@ public class ModLanguageProvider extends LanguageProvider {
         add("block.fiatlux.light_block.tooltip", "Illuminates the darkness");
         add("block.fiatlux.simple_storage_block.tooltip", "Stores items in a simple way");
         add("block.fiatlux.energy_storage_block.tooltip", "Stores and manages energy");
+        add("block.fiatlux.mecha_grid_block.tooltip", "A 4x4x4 grid for storing blocks in miniature");
         
         // Creative tab descriptions
         add("itemGroup.fiatlux.tooltip", "Main Fiat Lux items and blocks");
@@ -66,5 +70,12 @@ public class ModLanguageProvider extends LanguageProvider {
         add("message.fiatlux.energy_storage.energy_info", "Energy: %d/%d FE");
         add("message.fiatlux.energy_storage.extracted", "Extracted %d FE");
         add("message.fiatlux.energy_storage.added", "Added %d FE");
+        
+        // MechaGrid related messages
+        add("message.fiatlux.mecha_grid.placed_block", "Placed %s at [%d,%d,%d]");
+        add("message.fiatlux.mecha_grid.removed_block", "Removed block at [%d,%d,%d]");
+        add("message.fiatlux.mecha_grid.position_occupied", "Position [%d,%d,%d] is already occupied");
+        add("message.fiatlux.mecha_grid.status", "MechaGrid: %d/64 blocks placed");
+        add("message.fiatlux.mecha_grid.instructions", "Right-click with blocks to place, Shift+Right-click to remove");
     }
 }

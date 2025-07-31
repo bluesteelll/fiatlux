@@ -2,6 +2,7 @@ package art.boyko.fiatlux.init;
 
 import art.boyko.fiatlux.FiatLux;
 import art.boyko.fiatlux.custom.block.EnergyStorageBlock;
+import art.boyko.fiatlux.custom.block.MechaGridBlock;
 import art.boyko.fiatlux.custom.block.SimpleStorageBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -71,6 +72,19 @@ public class ModBlocks {
             .sound(SoundType.METAL)
             .requiresCorrectToolForDrops()
             .lightLevel(state -> 8) // Slightly glowing
+        )
+    );
+
+    // MechaGrid block - transparent block that holds 4x4x4 grid of blocks
+    public static final DeferredBlock<MechaGridBlock> MECHA_GRID_BLOCK = BLOCKS.register("mecha_grid_block",
+        () -> new MechaGridBlock(BlockBehaviour.Properties.of()
+            .mapColor(MapColor.DIAMOND)
+            .strength(3.0f, 8.0f)
+            .sound(SoundType.GLASS)
+            .requiresCorrectToolForDrops()
+            .noOcclusion() // Important for transparency
+            .isViewBlocking((state, level, pos) -> false) // Allow seeing through
+            .lightLevel(state -> 1) // Very slight glow to make it visible
         )
     );
 

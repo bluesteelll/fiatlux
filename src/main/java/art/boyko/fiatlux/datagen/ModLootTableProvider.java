@@ -39,6 +39,9 @@ public class ModLootTableProvider extends LootTableProvider {
             // Note: BlockEntity data is automatically preserved in item form
             dropSelf(ModBlocks.SIMPLE_STORAGE_BLOCK.get());
             dropSelf(ModBlocks.ENERGY_STORAGE_BLOCK.get());
+            
+            // MechaGrid block - drops itself and all contained blocks are handled in the block's onRemove method
+            dropSelf(ModBlocks.MECHA_GRID_BLOCK.get());
         }
 
         @Override

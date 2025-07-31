@@ -36,6 +36,9 @@ public class ModCreativeTabs {
                 // Add new blocks with BlockEntity
                 output.accept(ModItems.SIMPLE_STORAGE_BLOCK_ITEM.get());
                 output.accept(ModItems.ENERGY_STORAGE_BLOCK_ITEM.get());
+                
+                // Add MechaGrid block
+                output.accept(ModItems.MECHA_GRID_BLOCK_ITEM.get());
             }).build());
 
     // Alternative tab focused on blocks only 
@@ -54,6 +57,9 @@ public class ModCreativeTabs {
                 // Add new blocks with BlockEntity
                 output.accept(ModItems.SIMPLE_STORAGE_BLOCK_ITEM.get());
                 output.accept(ModItems.ENERGY_STORAGE_BLOCK_ITEM.get());
+                
+                // Add MechaGrid block
+                output.accept(ModItems.MECHA_GRID_BLOCK_ITEM.get());
             }).build());
 
     // Alternative tab focused on tools and materials 
