@@ -4,15 +4,25 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
+import art.boyko.fiatlux.custom.block.MechaGridBlock;
+import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
 import art.boyko.fiatlux.init.ModBlockEntities;
 import art.boyko.fiatlux.init.ModBlocks;
 import art.boyko.fiatlux.init.ModCreativeTabs;
 import art.boyko.fiatlux.init.ModDataComponents;
 import art.boyko.fiatlux.init.ModItems;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.neoforged.api.distmarker.Dist;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -21,7 +31,12 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Mod(FiatLux.MODID)
 public class FiatLux {
@@ -29,6 +44,10 @@ public class FiatLux {
     public static final String MODID = "fiatlux";
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
+
+    // Per-player cooldown to prevent multiple block removals from a single sustained click
+    private final Map<UUID, Long> playerClickCooldowns = new ConcurrentHashMap<>(); 
+    private static final long COOLDOWN_MILLIS = 200; // 200 milliseconds cooldown
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
@@ -99,5 +118,75 @@ public class FiatLux {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+    }
+
+    @SubscribeEvent
+    public void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
+        Level level = event.getLevel();
+        BlockPos pos = event.getPos();
+        Player player = event.getEntity();
+
+        BlockState blockState = level.getBlockState(pos);
+        if (!(blockState.getBlock() instanceof MechaGridBlock)) {
+            return; // Not a MechaGridBlock, do nothing
+        }
+
+        // Always cancel the event to prevent default block breaking behavior on both sides
+        event.setCanceled(true);
+
+        // Only process the actual block modification logic on the server side
+        if (level.isClientSide()) {
+            return; // Client just cancels and waits for server update
+        }
+
+        // Ensure it's our MechaGridBlockEntity
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof MechaGridBlockEntity mechaGrid)) {
+            return;
+        }
+
+        // Cast the block to MechaGridBlock to access its methods
+        MechaGridBlock mechaGridBlock = (MechaGridBlock) blockState.getBlock();
+
+        // Apply cooldown for single block removal (not for breaking the entire block)
+        if (!player.isShiftKeyDown()) {
+            long currentTime = System.currentTimeMillis();
+            UUID playerId = player.getUUID();
+            Long lastClickTime = playerClickCooldowns.getOrDefault(playerId, 0L);
+
+            if (currentTime - lastClickTime < COOLDOWN_MILLIS) {
+                return; // On cooldown, do nothing
+            }
+            playerClickCooldowns.put(playerId, currentTime);
+        }
+
+        if (player.isShiftKeyDown()) {
+            // Shift + Left Click: Break the entire MechaGridBlock
+            mechaGrid.dropAllBlocks(level, pos);
+            level.destroyBlock(pos, false); // Destroy the block without dropping itself
+            player.sendSystemMessage(Component.literal("MechaGridBlock broken and contents dropped!"));
+        } else {
+            // Left Click: Remove a specific block using ray tracing
+            BlockHitResult hitResult = mechaGridBlock.getPlayerPOVHitResult(level, player, pos);
+            if (hitResult != null) {
+                MechaGridBlock.GridPos targetPos = mechaGridBlock.findTargetGridPositionForRemoval(player, pos, hitResult, mechaGrid);
+                if (targetPos != null) {
+                    BlockState removedBlock = mechaGrid.removeBlock(targetPos.x(), targetPos.y(), targetPos.z());
+                    if (removedBlock != null && !removedBlock.isAir()) {
+                        // Replaced Block.popResource with manual item drop to prevent breaking animation and sound
+                        ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, new ItemStack(removedBlock.getBlock()));
+                        itemEntity.setDefaultPickUpDelay();
+                        level.addFreshEntity(itemEntity);
+                        player.sendSystemMessage(Component.literal("Removed " + removedBlock.getBlock().getName().getString() + " from [" + targetPos.x() + "," + targetPos.y() + "," + targetPos.z() + "]"));
+                    } else {
+                        player.sendSystemMessage(Component.literal("No block to remove at target position."));
+                    }
+                } else {
+                    player.sendSystemMessage(Component.literal("No block found to remove."));
+                }
+            } else {
+                player.sendSystemMessage(Component.literal("Could not determine hit result for removal."));
+            }
+        }
     }
 }

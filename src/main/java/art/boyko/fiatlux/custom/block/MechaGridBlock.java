@@ -4,7 +4,6 @@ import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
 import art.boyko.fiatlux.init.ModBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -26,6 +25,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+import javax.annotation.Nonnull;
 
 public class MechaGridBlock extends BaseEntityBlock {
     public static final MapCodec<MechaGridBlock> CODEC = simpleCodec(MechaGridBlock::new);
@@ -43,22 +43,22 @@ public class MechaGridBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
         return new MechaGridBlockEntity(pos, state);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+    protected InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hitResult) {
         return handleInteraction(state, level, pos, player, hitResult, ItemStack.EMPTY);
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+    protected ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
         InteractionResult result = handleInteraction(state, level, pos, player, hitResult, stack);
         return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    private InteractionResult handleInteraction(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult, ItemStack heldItem) {
+    private InteractionResult handleInteraction(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hitResult, ItemStack heldItem) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
@@ -70,18 +70,12 @@ public class MechaGridBlock extends BaseEntityBlock {
 
         // Handle sneaking (remove block) vs normal (place block)
         if (player.isShiftKeyDown()) {
-            // For removal, use the exact hit position like before
-            GridPos targetPos = getHitGridPosition(hitResult, pos);
-            
-            BlockState removedBlock = mechaGrid.removeBlock(targetPos.x, targetPos.y, targetPos.z);
-            if (removedBlock != null && !removedBlock.isAir()) {
-                Block.popResource(level, pos, new ItemStack(removedBlock.getBlock()));
-                player.sendSystemMessage(Component.literal("Removed block at [" + targetPos.x + "," + targetPos.y + "," + targetPos.z + "]"));
-                return InteractionResult.SUCCESS;
-            } else {
-                player.sendSystemMessage(Component.literal("No block at position [" + targetPos.x + "," + targetPos.y + "," + targetPos.z + "]"));
-                return InteractionResult.SUCCESS;
-            }
+            // This part is now handled by the attack method for Left Click
+            // We'll leave the right-click behavior for placing blocks
+            // For right-click, if shift is held, simply show grid status as before
+            int totalBlocks = mechaGrid.getTotalBlocks();
+            player.sendSystemMessage(Component.literal("MechaGrid: " + totalBlocks + "/64 blocks placed"));
+            return InteractionResult.SUCCESS;
         } else {
             // Place block using ray tracing
             if (!heldItem.isEmpty() && heldItem.getItem() instanceof BlockItem blockItem) {
@@ -137,8 +131,8 @@ public class MechaGridBlock extends BaseEntityBlock {
         double gridEntryY = (entryPoint.y - blockPos.getY()) * 4;
         double gridEntryZ = (entryPoint.z - blockPos.getZ()) * 4;
         
-        // Use 3D DDA algorithm to trace through grid
-        return traceRayThroughGrid(gridEntryX, gridEntryY, gridEntryZ, direction, mechaGrid);
+        // Use 3D DDA algorithm to trace through grid, looking for an empty spot
+        return traceRayThroughGrid(gridEntryX, gridEntryY, gridEntryZ, direction, mechaGrid, false);
     }
 
     /**
@@ -194,47 +188,53 @@ public class MechaGridBlock extends BaseEntityBlock {
 
     /**
      * 3D DDA ray tracing through voxel grid
+     * @param findOccupied If true, searches for an occupied block. If false, searches for an empty block.
      */
-    private GridPos traceRayThroughGrid(double startX, double startY, double startZ, 
-                                       net.minecraft.world.phys.Vec3 direction, MechaGridBlockEntity mechaGrid) {
+    public GridPos traceRayThroughGrid(double startX, double startY, double startZ,
+                                           @Nonnull net.minecraft.world.phys.Vec3 direction, @Nonnull MechaGridBlockEntity mechaGrid, boolean findOccupied) {
         // Clamp starting position to grid bounds
         startX = Math.max(0, Math.min(3.999, startX));
         startY = Math.max(0, Math.min(3.999, startY));
         startZ = Math.max(0, Math.min(3.999, startZ));
-        
+
         // Current grid position
         int gridX = (int) startX;
         int gridY = (int) startY;
         int gridZ = (int) startZ;
-        
+
         // Step direction for each axis
         int stepX = direction.x > 0 ? 1 : -1;
         int stepY = direction.y > 0 ? 1 : -1;
         int stepZ = direction.z > 0 ? 1 : -1;
-        
+
         // Calculate t values for next grid boundary crossing
         double tMaxX = direction.x != 0 ? ((stepX > 0 ? gridX + 1 : gridX) - startX) / direction.x : Double.POSITIVE_INFINITY;
         double tMaxY = direction.y != 0 ? ((stepY > 0 ? gridY + 1 : gridY) - startY) / direction.y : Double.POSITIVE_INFINITY;
         double tMaxZ = direction.z != 0 ? ((stepZ > 0 ? gridZ + 1 : gridZ) - startZ) / direction.z : Double.POSITIVE_INFINITY;
-        
+
         // Delta t for stepping to next grid boundary
         double tDeltaX = direction.x != 0 ? 1.0 / Math.abs(direction.x) : Double.POSITIVE_INFINITY;
         double tDeltaY = direction.y != 0 ? 1.0 / Math.abs(direction.y) : Double.POSITIVE_INFINITY;
         double tDeltaZ = direction.z != 0 ? 1.0 / Math.abs(direction.z) : Double.POSITIVE_INFINITY;
-        
-        GridPos lastEmpty = null;
+
+        GridPos resultPos = null; // Stores the position found
         int steps = 0;
         int maxSteps = 12; // Maximum possible steps through 4x4x4 grid
-        
+
         while (steps < maxSteps && gridX >= 0 && gridX < 4 && gridY >= 0 && gridY < 4 && gridZ >= 0 && gridZ < 4) {
-            // Check current position
-            if (!mechaGrid.isPositionOccupied(gridX, gridY, gridZ)) {
-                lastEmpty = new GridPos(gridX, gridY, gridZ);
+            // Check current position based on findOccupied flag
+            if (findOccupied) {
+                if (mechaGrid.isPositionOccupied(gridX, gridY, gridZ)) {
+                    return new GridPos(gridX, gridY, gridZ); // Found occupied block
+                }
             } else {
-                // Hit an occupied block, return last empty position
-                return lastEmpty;
+                if (!mechaGrid.isPositionOccupied(gridX, gridY, gridZ)) {
+                    resultPos = new GridPos(gridX, gridY, gridZ); // Found empty block
+                } else {
+                    return resultPos; // Hit an occupied block, return last empty position
+                }
             }
-            
+
             // Step to next grid cell
             if (tMaxX < tMaxY && tMaxX < tMaxZ) {
                 gridX += stepX;
@@ -246,52 +246,83 @@ public class MechaGridBlock extends BaseEntityBlock {
                 gridZ += stepZ;
                 tMaxZ += tDeltaZ;
             }
-            
+
             steps++;
         }
-        
-        return lastEmpty;
+
+        return resultPos; // Return the last empty position found (for placement) or null (if no occupied found for breaking)
     }
 
     /**
-     * Get grid position from hit location (for removal)
+     * Find block to break position using ray tracing through the grid
      */
-    private GridPos getHitGridPosition(BlockHitResult hitResult, BlockPos pos) {
-        double relativeX = hitResult.getLocation().x - pos.getX();
-        double relativeY = hitResult.getLocation().y - pos.getY();
-        double relativeZ = hitResult.getLocation().z - pos.getZ();
+    public GridPos findTargetGridPositionForRemoval(Player player, BlockPos blockPos, BlockHitResult hitResult, MechaGridBlockEntity mechaGrid) {
+        // Get ray origin and direction
+        net.minecraft.world.phys.Vec3 eyePos = player.getEyePosition();
+        net.minecraft.world.phys.Vec3 hitVec = hitResult.getLocation();
+        net.minecraft.world.phys.Vec3 direction = hitVec.subtract(eyePos).normalize();
+
+        // Calculate entry point into the block
+        net.minecraft.world.phys.Vec3 blockMin = net.minecraft.world.phys.Vec3.atLowerCornerOf(blockPos);
+        net.minecraft.world.phys.Vec3 blockMax = blockMin.add(1, 1, 1);
+
+        // Find where ray enters the block
+        net.minecraft.world.phys.Vec3 entryPoint = rayBoxIntersection(eyePos, direction, blockMin, blockMax);
+        if (entryPoint == null) {
+            return null;
+        }
+
+        // Convert to grid space (0-4 range for continuous coordinates)
+        double gridEntryX = (entryPoint.x - blockPos.getX()) * 4;
+        double gridEntryY = (entryPoint.y - blockPos.getY()) * 4;
+        double gridEntryZ = (entryPoint.z - blockPos.getZ()) * 4;
+
+        // Use 3D DDA algorithm to trace through grid, looking for an occupied spot
+        return traceRayThroughGrid(gridEntryX, gridEntryY, gridEntryZ, direction, mechaGrid, true);
+    }
+
+    /**
+     * Helper to get player's POV hit result for accurate ray tracing
+     */
+    public BlockHitResult getPlayerPOVHitResult(@Nonnull Level level, @Nonnull Player player, @Nonnull BlockPos blockPos) {
+        net.minecraft.world.phys.Vec3 eyePos = player.getEyePosition();
+        net.minecraft.world.phys.Vec3 viewVector = player.getViewVector(1.0F); // Current view direction
+        double reach = player.blockInteractionRange(); // Player's block interaction range
+
+        // Calculate ray end point
+        net.minecraft.world.phys.Vec3 rayEnd = eyePos.add(viewVector.x * reach, viewVector.y * reach, viewVector.z * reach);
+
+        // Perform ray trace against the block's collision shape
+        // This will find the specific face and hit location on the MechaGridBlock
+        // For accurate sub-block ray tracing, we want to trace through the internal grid.
+        // So, we'll return a BlockHitResult that represents the *entry point* into our block,
+        // which the findBlockToBreakPosition will then use for its internal grid raycast.
+        BlockHitResult result = level.clip(new net.minecraft.world.level.ClipContext(eyePos, rayEnd,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
         
-        // Adjust for face hit to get the block in front of the face
-        Direction face = hitResult.getDirection();
-        relativeX -= face.getStepX() * 0.01;
-        relativeY -= face.getStepY() * 0.01;
-        relativeZ -= face.getStepZ() * 0.01;
-        
-        // Clamp and convert to grid coordinates
-        int gridX = Math.max(0, Math.min(3, (int) (relativeX * 4)));
-        int gridY = Math.max(0, Math.min(3, (int) (relativeY * 4)));
-        int gridZ = Math.max(0, Math.min(3, (int) (relativeZ * 4)));
-        
-        return new GridPos(gridX, gridY, gridZ);
+        if (result != null && result.getBlockPos().equals(blockPos)) {
+            return result;
+        }
+        return null;
     }
 
     /**
      * Simple record for grid positions
      */
-    private record GridPos(int x, int y, int z) {}
+    public static record GridPos(int x, int y, int z) {}
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    protected RenderShape getRenderShape(@Nonnull BlockState state) {
         return RenderShape.ENTITYBLOCK_ANIMATED; // Custom rendering
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    protected VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         return SHAPE; // Full block shape for interaction
     }
     
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    protected VoxelShape getCollisionShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         // Get the block entity to check what blocks are inside
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (!(blockEntity instanceof MechaGridBlockEntity mechaGrid)) {
@@ -303,34 +334,34 @@ public class MechaGridBlock extends BaseEntityBlock {
     }
     
     @Override
-    protected VoxelShape getInteractionShape(BlockState state, BlockGetter level, BlockPos pos) {
+    protected VoxelShape getInteractionShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos) {
         // This shape is used for raytracing when the player looks at the block
         // Keep full block shape so players can interact with any part of the block
         return SHAPE;
     }
     
     @Override
-    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+    protected float getShadeBrightness(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos) {
         return 1.0F; // Full brightness, no shadow
     }
     
     @Override
-    protected boolean isOcclusionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) {
+    protected boolean isOcclusionShapeFullBlock(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos) {
         return false; // Not a full block for occlusion
     }
     
     @Override
-    protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    protected VoxelShape getVisualShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         return Shapes.empty(); // No visual occlusion
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+    protected boolean propagatesSkylightDown(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos) {
         return true; // Allow light to pass through
     }
 
     @Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+    protected void onRemove(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState newState, boolean movedByPiston) {
         if (state.getBlock() != newState.getBlock()) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof MechaGridBlockEntity mechaGrid) {
@@ -342,8 +373,8 @@ public class MechaGridBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state, @Nonnull BlockEntityType<T> blockEntityType) {
         return level.isClientSide() ? null : createTickerHelper(blockEntityType, ModBlockEntities.MECHA_GRID_BE.get(),
-                (level1, pos, state1, blockEntity) -> blockEntity.tick(level1, pos, state1));
+                (level1, pos1, state1, blockEntity) -> blockEntity.tick(level1, pos1, state1));
     }
 }
