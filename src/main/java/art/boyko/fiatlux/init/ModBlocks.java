@@ -75,19 +75,20 @@ public class ModBlocks {
         )
     );
 
-    // MechaGrid block - transparent block that holds 4x4x4 grid of blocks
-    public static final DeferredBlock<MechaGridBlock> MECHA_GRID_BLOCK = BLOCKS.register("mecha_grid_block",
-        () -> new MechaGridBlock(BlockBehaviour.Properties.of()
-            .mapColor(MapColor.DIAMOND)
-            .strength(3.0f, 8.0f)
-            .sound(SoundType.GLASS)
-            .requiresCorrectToolForDrops()
-            .noOcclusion() // Important for transparency
-            .isViewBlocking((state, level, pos) -> false) // Allow seeing through
-            .lightLevel(state -> 1) // Very slight glow to make it visible
-        )
-    );
-
+// MechaGrid block - transparent block that holds 4x4x4 grid of blocks
+public static final DeferredBlock<MechaGridBlock> MECHA_GRID_BLOCK = BLOCKS.register("mecha_grid_block",
+    () -> new MechaGridBlock(BlockBehaviour.Properties.of()
+        .mapColor(MapColor.DIAMOND)
+        .strength(3.0f, 8.0f)
+        .sound(SoundType.GLASS)
+        .requiresCorrectToolForDrops()
+        .noOcclusion() // Important for transparency
+        .isViewBlocking((state, level, pos) -> false) // Allow seeing through
+        .isSuffocating((state, level, pos) -> false) // Don't suffocate entities
+        .isRedstoneConductor((state, level, pos) -> false) // Don't conduct redstone
+        .lightLevel(state -> 1) // Very slight glow to make it visible
+    )
+);
     /**
      * Register all blocks to the event bus
      * This method should be called in the mod constructor

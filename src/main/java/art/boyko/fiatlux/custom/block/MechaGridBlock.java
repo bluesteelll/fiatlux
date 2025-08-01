@@ -287,12 +287,41 @@ public class MechaGridBlock extends BaseEntityBlock {
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE; // Full block shape for interaction
+    }
+    
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        // Get the block entity to check what blocks are inside
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof MechaGridBlockEntity mechaGrid)) {
+            return Shapes.empty(); // No collision if no block entity
+        }
+        
+        // Return the cached collision shape
+        return mechaGrid.getCachedCollisionShape();
+    }
+    
+    @Override
+    protected VoxelShape getInteractionShape(BlockState state, BlockGetter level, BlockPos pos) {
+        // This shape is used for raytracing when the player looks at the block
+        // Keep full block shape so players can interact with any part of the block
         return SHAPE;
     }
-
+    
     @Override
     protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
-        return 1.0f; // Full brightness for transparency
+        return 1.0F; // Full brightness, no shadow
+    }
+    
+    @Override
+    protected boolean isOcclusionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) {
+        return false; // Not a full block for occlusion
+    }
+    
+    @Override
+    protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return Shapes.empty(); // No visual occlusion
     }
 
     @Override

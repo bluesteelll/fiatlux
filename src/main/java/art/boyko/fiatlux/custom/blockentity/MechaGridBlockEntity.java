@@ -3,6 +3,7 @@ package art.boyko.fiatlux.custom.blockentity;
 import art.boyko.fiatlux.init.ModBlockEntities;
 import art.boyko.fiatlux.init.ModDataComponents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +18,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -35,6 +38,10 @@ public class MechaGridBlockEntity extends BlockEntity {
     // Cache for performance
     private int cachedBlockCount = 0;
     private boolean isDirty = false;
+    
+    // Collision shape cache
+    private VoxelShape cachedCollisionShape = null;
+    private boolean collisionShapeDirty = true;
 
     public MechaGridBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MECHA_GRID_BE.get(), pos, blockState);
@@ -90,6 +97,7 @@ public class MechaGridBlockEntity extends BlockEntity {
         grid[x][y][z] = blockState;
         occupiedMask |= (1L << bitIndex);
         cachedBlockCount++;
+        collisionShapeDirty = true; // Mark collision shape for recalculation
         
         markDirty();
         return true;
@@ -115,13 +123,14 @@ public class MechaGridBlockEntity extends BlockEntity {
         }
 
         // Remove the block
-        BlockState removedBlock = grid[x][y][z];
+        BlockState removedState = grid[x][y][z];
         grid[x][y][z] = Blocks.AIR.defaultBlockState();
         occupiedMask &= ~(1L << bitIndex);
         cachedBlockCount--;
+        collisionShapeDirty = true; // Mark collision shape for recalculation
         
         markDirty();
-        return removedBlock;
+        return removedState;
     }
 
     /**
@@ -187,10 +196,62 @@ public class MechaGridBlockEntity extends BlockEntity {
     }
 
     /**
-     * Get 3D grid for rendering
+     * Gets the grid array for direct access (use carefully)
      */
     public BlockState[][][] getGrid() {
         return grid;
+    }
+    
+    /**
+     * Gets the cached collision shape, recalculating if necessary
+     */
+    public VoxelShape getCachedCollisionShape() {
+        if (collisionShapeDirty || cachedCollisionShape == null) {
+            cachedCollisionShape = buildCollisionShape();
+            collisionShapeDirty = false;
+        }
+        return cachedCollisionShape;
+    }
+    
+    /**
+     * Builds the collision shape from all blocks in the grid
+     */
+    private VoxelShape buildCollisionShape() {
+        if (isEmpty()) {
+            return Shapes.empty();
+        }
+        
+        VoxelShape combinedShape = Shapes.empty();
+        double cellSize = 1.0 / GRID_SIZE;
+        
+        for (int x = 0; x < GRID_SIZE; x++) {
+            for (int y = 0; y < GRID_SIZE; y++) {
+                for (int z = 0; z < GRID_SIZE; z++) {
+                    int bitIndex = x + y * GRID_SIZE + z * GRID_SIZE * GRID_SIZE;
+                    if ((occupiedMask & (1L << bitIndex)) == 0) {
+                        continue;
+                    }
+                    
+                    BlockState blockState = grid[x][y][z];
+                    if (blockState.isAir()) {
+                        continue;
+                    }
+                    
+                    // Create a small cube for each mini block
+                    double minX = x * cellSize;
+                    double minY = y * cellSize;
+                    double minZ = z * cellSize;
+                    double maxX = minX + cellSize;
+                    double maxY = minY + cellSize;
+                    double maxZ = minZ + cellSize;
+                    
+                    VoxelShape cellShape = Shapes.box(minX, minY, minZ, maxX, maxY, maxZ);
+                    combinedShape = Shapes.or(combinedShape, cellShape);
+                }
+            }
+        }
+        
+        return combinedShape;
     }
 
     /**
@@ -212,6 +273,23 @@ public class MechaGridBlockEntity extends BlockEntity {
     private void markDirty() {
         setChanged();
         isDirty = true;
+        
+        // Notify the world that collision shape may have changed
+        if (level != null && !level.isClientSide()) {
+            BlockState blockState = level.getBlockState(worldPosition);
+            level.sendBlockUpdated(worldPosition, blockState, blockState, 3);
+            
+            // Force neighbors to update their cached shapes
+            level.neighborChanged(worldPosition, blockState.getBlock(), worldPosition);
+        }
+    }
+    
+    /**
+     * Forces recalculation of collision shape
+     */
+    public void invalidateCollisionCache() {
+        collisionShapeDirty = true;
+        cachedCollisionShape = null;
     }
 
     // NBT Serialization
@@ -265,6 +343,10 @@ public class MechaGridBlockEntity extends BlockEntity {
         // Load occupied mask and count
         occupiedMask = tag.getLong("OccupiedMask");
         cachedBlockCount = tag.getInt("BlockCount");
+        
+        // Reset collision cache
+        collisionShapeDirty = true;
+        cachedCollisionShape = null;
         
         // Load blocks
         ListTag blocksList = tag.getList("Blocks", Tag.TAG_COMPOUND);
