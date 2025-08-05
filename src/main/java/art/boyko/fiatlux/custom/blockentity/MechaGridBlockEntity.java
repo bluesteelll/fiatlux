@@ -1,47 +1,57 @@
 package art.boyko.fiatlux.custom.blockentity;
 
 import art.boyko.fiatlux.init.ModBlockEntities;
-import art.boyko.fiatlux.init.ModDataComponents;
+import art.boyko.fiatlux.mechamodule.base.IMechaModule;
+import art.boyko.fiatlux.mechamodule.context.IModuleContext;
+import art.boyko.fiatlux.mechamodule.context.ModuleContext;
+import art.boyko.fiatlux.mechamodule.registry.ModuleRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MechaGridBlockEntity extends BlockEntity {
     public static final int GRID_SIZE = 4;
     public static final int TOTAL_POSITIONS = GRID_SIZE * GRID_SIZE * GRID_SIZE; // 64 positions
     
-    // 3D array for storing block states - optimized access pattern
-    private final BlockState[][][] grid = new BlockState[GRID_SIZE][GRID_SIZE][GRID_SIZE];
+    // 3D array for storing modules - replacing BlockState grid
+    private final IMechaModule[][][] moduleGrid = new IMechaModule[GRID_SIZE][GRID_SIZE][GRID_SIZE];
+    
+    // Module contexts for each position
+    private final ModuleContext[][][] contextGrid = new ModuleContext[GRID_SIZE][GRID_SIZE][GRID_SIZE];
     
     // Bit field for tracking occupied positions (64 bits = 1 long)
-    // More memory-efficient than checking BlockState.isAir() for each position
     private long occupiedMask = 0L;
     
     // Cache for performance
-    private int cachedBlockCount = 0;
+    private int cachedModuleCount = 0;
     private boolean isDirty = false;
     
     // Collision shape cache
     private VoxelShape cachedCollisionShape = null;
     private boolean collisionShapeDirty = true;
+    
+    // Module ticking system
+    private final List<IModuleContext> tickingModules = new ArrayList<>();
+    private final Map<IModuleContext, Integer> updateSchedule = new HashMap<>();
+    private int currentTick = 0;
 
     public MechaGridBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MECHA_GRID_BE.get(), pos, blockState);
@@ -49,22 +59,33 @@ public class MechaGridBlockEntity extends BlockEntity {
     }
 
     private void initializeGrid() {
-        // Initialize all positions with air
+        // Initialize all positions as empty
         for (int x = 0; x < GRID_SIZE; x++) {
             for (int y = 0; y < GRID_SIZE; y++) {
                 for (int z = 0; z < GRID_SIZE; z++) {
-                    grid[x][y][z] = Blocks.AIR.defaultBlockState();
+                    moduleGrid[x][y][z] = null;
+                    contextGrid[x][y][z] = null;
                 }
             }
         }
         occupiedMask = 0L;
-        cachedBlockCount = 0;
+        cachedModuleCount = 0;
+        tickingModules.clear();
+        updateSchedule.clear();
     }
 
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) {
             return;
         }
+        
+        currentTick++;
+        
+        // Process scheduled updates
+        processScheduledUpdates();
+        
+        // Tick all modules that need ticking
+        tickModules();
 
         // Sync to client if dirty
         if (isDirty) {
@@ -72,17 +93,40 @@ public class MechaGridBlockEntity extends BlockEntity {
             isDirty = false;
         }
     }
+    
+    private void processScheduledUpdates() {
+        updateSchedule.entrySet().removeIf(entry -> {
+            if (entry.getValue() <= currentTick) {
+                // Process the update
+                IModuleContext context = entry.getKey();
+                ModuleContext moduleContext = (ModuleContext) context;
+                moduleContext.clearUpdateFlag();
+                return true;
+            }
+            return false;
+        });
+    }
+    
+    private void tickModules() {
+        for (IModuleContext context : tickingModules) {
+            ModuleContext moduleContext = (ModuleContext) context;
+            IMechaModule module = moduleContext.getOwnerModule();
+            if (module != null && module.needsTicking()) {
+                module.tick(context);
+            }
+        }
+    }
 
     /**
-     * Place a block at the specified grid position
+     * Place a module at the specified grid position
      * @param x Grid X coordinate (0-3)
      * @param y Grid Y coordinate (0-3) 
      * @param z Grid Z coordinate (0-3)
-     * @param blockState The block state to place
+     * @param module The module to place
      * @return true if successfully placed, false if position was occupied
      */
-    public boolean placeBlock(int x, int y, int z, BlockState blockState) {
-        if (!isValidPosition(x, y, z)) {
+    public boolean placeModule(int x, int y, int z, IMechaModule module) {
+        if (!isValidPosition(x, y, z) || module == null) {
             return false;
         }
 
@@ -93,24 +137,50 @@ public class MechaGridBlockEntity extends BlockEntity {
             return false;
         }
 
-        // Place the block
-        grid[x][y][z] = blockState;
+        // Create context for the module
+        IModuleContext.GridPosition gridPos = new IModuleContext.GridPosition(x, y, z);
+        ModuleContext context = new ModuleContext(this, gridPos, module);
+        
+        // Place the module
+        moduleGrid[x][y][z] = module;
+        contextGrid[x][y][z] = context;
         occupiedMask |= (1L << bitIndex);
-        cachedBlockCount++;
-        collisionShapeDirty = true; // Mark collision shape for recalculation
+        cachedModuleCount++;
+        collisionShapeDirty = true;
+        
+        // Initialize the module
+        module.onPlacedInGrid(context);
+        
+        // Add to ticking list if needed
+        if (module.needsTicking()) {
+            tickingModules.add(context);
+        }
+        
+        // Notify neighbors
+        notifyNeighborsOfChange(x, y, z, module);
         
         markDirty();
         return true;
     }
+    
+    /**
+     * Legacy method for backward compatibility - converts BlockState to module if possible
+     */
+    @Deprecated
+    public boolean placeBlock(int x, int y, int z, BlockState blockState) {
+        // This is for backward compatibility - in the future, this should not be used
+        // For now, we'll ignore BlockState placement since modules are the new system
+        return false;
+    }
 
     /**
-     * Remove block at the specified grid position
+     * Remove module at the specified grid position
      * @param x Grid X coordinate (0-3)
      * @param y Grid Y coordinate (0-3)
      * @param z Grid Z coordinate (0-3)
-     * @return The removed block state, or null if position was empty
+     * @return The removed module, or null if position was empty
      */
-    public @Nullable BlockState removeBlock(int x, int y, int z) {
+    public @Nullable IMechaModule removeModule(int x, int y, int z) {
         if (!isValidPosition(x, y, z)) {
             return null;
         }
@@ -122,25 +192,72 @@ public class MechaGridBlockEntity extends BlockEntity {
             return null;
         }
 
-        // Remove the block
-        BlockState removedState = grid[x][y][z];
-        grid[x][y][z] = Blocks.AIR.defaultBlockState();
+        // Get the module and context
+        IMechaModule removedModule = moduleGrid[x][y][z];
+        ModuleContext context = contextGrid[x][y][z];
+        
+        if (removedModule == null) {
+            return null;
+        }
+        
+        // Notify the module it's being removed
+        removedModule.onRemovedFromGrid(context);
+        
+        // Remove from ticking list
+        tickingModules.remove(context);
+        updateSchedule.remove(context);
+        
+        // Break all connections
+        if (context != null) {
+            context.breakAllConnections();
+        }
+        
+        // Remove the module
+        moduleGrid[x][y][z] = null;
+        contextGrid[x][y][z] = null;
         occupiedMask &= ~(1L << bitIndex);
-        cachedBlockCount--;
-        collisionShapeDirty = true; // Mark collision shape for recalculation
+        cachedModuleCount--;
+        collisionShapeDirty = true;
+        
+        // Notify neighbors
+        notifyNeighborsOfChange(x, y, z, null);
         
         markDirty();
-        return removedState;
+        return removedModule;
     }
+    
+    /**
+     * Legacy method for backward compatibility - REMOVED
+     * Use removeModule() instead to get proper ItemStack from toItemStack()
+     */
 
     /**
-     * Get block state at specified grid position
+     * Get module at specified grid position
      */
-    public BlockState getBlock(int x, int y, int z) {
+    public @Nullable IMechaModule getModule(int x, int y, int z) {
         if (!isValidPosition(x, y, z)) {
-            return Blocks.AIR.defaultBlockState();
+            return null;
         }
-        return grid[x][y][z];
+        return moduleGrid[x][y][z];
+    }
+    
+    /**
+     * Get module context at specified grid position
+     */
+    public @Nullable IModuleContext getModuleContext(int x, int y, int z) {
+        if (!isValidPosition(x, y, z)) {
+            return null;
+        }
+        return contextGrid[x][y][z];
+    }
+    
+    /**
+     * Legacy method for backward compatibility - returns render state of module
+     */
+    @Deprecated
+    public BlockState getBlock(int x, int y, int z) {
+        IMechaModule module = getModule(x, y, z);
+        return module != null ? module.getRenderState() : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
     }
 
     /**
@@ -159,47 +276,85 @@ public class MechaGridBlockEntity extends BlockEntity {
     }
 
     /**
-     * Get total number of blocks placed in the grid
+     * Get total number of modules placed in the grid
      */
+    public int getTotalModules() {
+        return cachedModuleCount;
+    }
+    
+    /**
+     * Legacy method for backward compatibility
+     */
+    @Deprecated
     public int getTotalBlocks() {
-        return cachedBlockCount;
+        return getTotalModules();
     }
 
     /**
      * Check if grid is full
      */
     public boolean isFull() {
-        return cachedBlockCount >= TOTAL_POSITIONS;
+        return cachedModuleCount >= TOTAL_POSITIONS;
     }
 
     /**
      * Check if grid is empty
      */
     public boolean isEmpty() {
-        return cachedBlockCount == 0;
+        return cachedModuleCount == 0;
     }
 
     /**
-     * Drop all blocks stored in the grid when block is broken
+     * Drop all modules stored in the grid when block is broken
      */
-    public void dropAllBlocks(Level level, BlockPos pos) {
+    public void dropAllModules(Level level, BlockPos pos) {
         for (int x = 0; x < GRID_SIZE; x++) {
             for (int y = 0; y < GRID_SIZE; y++) {
                 for (int z = 0; z < GRID_SIZE; z++) {
-                    BlockState blockState = grid[x][y][z];
-                    if (!blockState.isAir()) {
-                        net.minecraft.world.level.block.Block.popResource(level, pos, new ItemStack(blockState.getBlock()));
+                    IMechaModule module = moduleGrid[x][y][z];
+                    if (module != null) {
+                        ItemStack moduleStack = module.toItemStack();
+                        net.minecraft.world.level.block.Block.popResource(level, pos, moduleStack);
                     }
                 }
             }
         }
     }
+    
+    /**
+     * Legacy method for backward compatibility - REMOVED
+     * Use dropAllModules() instead or rely on automatic onRemove()
+     */
 
     /**
-     * Gets the grid array for direct access (use carefully)
+     * Gets the module grid array for direct access (use carefully)
      */
+    public IMechaModule[][][] getModuleGrid() {
+        return moduleGrid;
+    }
+    
+    /**
+     * Gets the context grid array for direct access (use carefully)
+     */
+    public ModuleContext[][][] getContextGrid() {
+        return contextGrid;
+    }
+    
+    /**
+     * Legacy method for backward compatibility - creates virtual BlockState grid
+     */
+    @Deprecated
     public BlockState[][][] getGrid() {
-        return grid;
+        BlockState[][][] virtualGrid = new BlockState[GRID_SIZE][GRID_SIZE][GRID_SIZE];
+        for (int x = 0; x < GRID_SIZE; x++) {
+            for (int y = 0; y < GRID_SIZE; y++) {
+                for (int z = 0; z < GRID_SIZE; z++) {
+                    IMechaModule module = moduleGrid[x][y][z];
+                    virtualGrid[x][y][z] = module != null ? module.getRenderState() : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                }
+            }
+        }
+        return virtualGrid;
     }
     
     /**
@@ -214,7 +369,7 @@ public class MechaGridBlockEntity extends BlockEntity {
     }
     
     /**
-     * Builds the collision shape from all blocks in the grid
+     * Builds the collision shape from all modules in the grid
      */
     private VoxelShape buildCollisionShape() {
         if (isEmpty()) {
@@ -232,12 +387,12 @@ public class MechaGridBlockEntity extends BlockEntity {
                         continue;
                     }
                     
-                    BlockState blockState = grid[x][y][z];
-                    if (blockState.isAir()) {
+                    IMechaModule module = moduleGrid[x][y][z];
+                    if (module == null) {
                         continue;
                     }
                     
-                    // Create a small cube for each mini block
+                    // Create a small cube for each module
                     double minX = x * cellSize;
                     double minY = y * cellSize;
                     double minZ = z * cellSize;
@@ -270,7 +425,7 @@ public class MechaGridBlockEntity extends BlockEntity {
         return x + y * GRID_SIZE + z * GRID_SIZE * GRID_SIZE;
     }
 
-    private void markDirty() {
+    public void markDirty() {
         setChanged();
         isDirty = true;
         
@@ -282,6 +437,33 @@ public class MechaGridBlockEntity extends BlockEntity {
             // Force neighbors to update their cached shapes
             level.neighborChanged(worldPosition, blockState.getBlock(), worldPosition);
         }
+    }
+    
+    /**
+     * Notify neighboring modules when a module is placed or removed
+     */
+    private void notifyNeighborsOfChange(int x, int y, int z, @Nullable IMechaModule placedModule) {
+        for (Direction direction : Direction.values()) {
+            int neighborX = x + direction.getStepX();
+            int neighborY = y + direction.getStepY();
+            int neighborZ = z + direction.getStepZ();
+            
+            if (isValidPosition(neighborX, neighborY, neighborZ)) {
+                IMechaModule neighborModule = moduleGrid[neighborX][neighborY][neighborZ];
+                IModuleContext neighborContext = contextGrid[neighborX][neighborY][neighborZ];
+                
+                if (neighborModule != null && neighborContext != null) {
+                    neighborModule.onNeighborChanged(neighborContext, direction.getOpposite(), placedModule);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Schedule a module for update on the next tick
+     */
+    public void scheduleModuleUpdate(IModuleContext context) {
+        updateSchedule.put(context, currentTick + 1);
     }
     
     /**
@@ -299,38 +481,31 @@ public class MechaGridBlockEntity extends BlockEntity {
         
         // Save occupied mask for efficiency
         tag.putLong("OccupiedMask", occupiedMask);
-        tag.putInt("BlockCount", cachedBlockCount);
+        tag.putInt("ModuleCount", cachedModuleCount);
+        tag.putInt("CurrentTick", currentTick);
         
         // Save only occupied positions to reduce NBT size
-        ListTag blocksList = new ListTag();
+        ListTag modulesList = new ListTag();
         for (int x = 0; x < GRID_SIZE; x++) {
             for (int y = 0; y < GRID_SIZE; y++) {
                 for (int z = 0; z < GRID_SIZE; z++) {
-                    BlockState blockState = grid[x][y][z];
-                    if (!blockState.isAir()) {
-                        CompoundTag blockTag = new CompoundTag();
-                        blockTag.putInt("x", x);
-                        blockTag.putInt("y", y);
-                        blockTag.putInt("z", z);
+                    IMechaModule module = moduleGrid[x][y][z];
+                    if (module != null) {
+                        CompoundTag moduleTag = new CompoundTag();
+                        moduleTag.putInt("x", x);
+                        moduleTag.putInt("y", y);
+                        moduleTag.putInt("z", z);
                         
-                        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(blockState.getBlock());
-                        blockTag.putString("block", blockId.toString());
+                        // Save module data
+                        CompoundTag moduleData = module.saveToNBT();
+                        moduleTag.put("ModuleData", moduleData);
                         
-                        // Save block state properties if any
-                        if (!blockState.getValues().isEmpty()) {
-                            CompoundTag propertiesTag = new CompoundTag();
-                            blockState.getValues().forEach((property, value) -> {
-                                propertiesTag.putString(property.getName(), value.toString());
-                            });
-                            blockTag.put("properties", propertiesTag);
-                        }
-                        
-                        blocksList.add(blockTag);
+                        modulesList.add(moduleTag);
                     }
                 }
             }
         }
-        tag.put("Blocks", blocksList);
+        tag.put("Modules", modulesList);
     }
 
     @Override
@@ -342,37 +517,47 @@ public class MechaGridBlockEntity extends BlockEntity {
         
         // Load occupied mask and count
         occupiedMask = tag.getLong("OccupiedMask");
-        cachedBlockCount = tag.getInt("BlockCount");
+        cachedModuleCount = tag.getInt("ModuleCount");
+        currentTick = tag.getInt("CurrentTick");
         
         // Reset collision cache
         collisionShapeDirty = true;
         cachedCollisionShape = null;
         
-        // Load blocks
-        ListTag blocksList = tag.getList("Blocks", Tag.TAG_COMPOUND);
-        for (int i = 0; i < blocksList.size(); i++) {
-            CompoundTag blockTag = blocksList.getCompound(i);
+        // Clear ticking lists
+        tickingModules.clear();
+        updateSchedule.clear();
+        
+        // Load modules
+        ListTag modulesList = tag.getList("Modules", Tag.TAG_COMPOUND);
+        for (int i = 0; i < modulesList.size(); i++) {
+            CompoundTag moduleTag = modulesList.getCompound(i);
             
-            int x = blockTag.getInt("x");
-            int y = blockTag.getInt("y");
-            int z = blockTag.getInt("z");
+            int x = moduleTag.getInt("x");
+            int y = moduleTag.getInt("y");
+            int z = moduleTag.getInt("z");
             
-            if (isValidPosition(x, y, z)) {
-                String blockId = blockTag.getString("block");
-                ResourceLocation blockLocation = ResourceLocation.parse(blockId);
+            if (isValidPosition(x, y, z) && moduleTag.contains("ModuleData")) {
+                CompoundTag moduleData = moduleTag.getCompound("ModuleData");
                 
-                if (BuiltInRegistries.BLOCK.containsKey(blockLocation)) {
-                    net.minecraft.world.level.block.Block block = BuiltInRegistries.BLOCK.get(blockLocation);
-                    BlockState blockState = block.defaultBlockState();
+                // Create module from NBT
+                IMechaModule module = ModuleRegistry.createModuleFromNBT(moduleData);
+                if (module != null) {
+                    // Create context
+                    IModuleContext.GridPosition gridPos = new IModuleContext.GridPosition(x, y, z);
+                    ModuleContext context = new ModuleContext(this, gridPos, module);
                     
-                    // Load properties if any
-                    if (blockTag.contains("properties")) {
-                        CompoundTag propertiesTag = blockTag.getCompound("properties");
-                        // Note: Full property restoration would require more complex logic
-                        // For now, we use default state
+                    // Place module in grid
+                    moduleGrid[x][y][z] = module;
+                    contextGrid[x][y][z] = context;
+                    
+                    // Add to ticking list if needed
+                    if (module.needsTicking()) {
+                        tickingModules.add(context);
                     }
                     
-                    grid[x][y][z] = blockState;
+                    // Initialize module context
+                    module.onPlacedInGrid(context);
                 }
             }
         }
@@ -389,5 +574,21 @@ public class MechaGridBlockEntity extends BlockEntity {
     @Override
     public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+    
+    /**
+     * Get all modules that need ticking
+     */
+    public List<IModuleContext> getTickingModules() {
+        return new ArrayList<>(tickingModules);
+    }
+    
+    /**
+     * Check if a module at the given position exists and implements IModuleContext.GridPosition interface properly
+     */
+    public boolean hasValidModuleAt(int x, int y, int z) {
+        return isValidPosition(x, y, z) && 
+               moduleGrid[x][y][z] != null && 
+               contextGrid[x][y][z] != null;
     }
 }

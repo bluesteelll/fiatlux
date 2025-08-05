@@ -6,11 +6,13 @@ import com.mojang.logging.LogUtils;
 
 import art.boyko.fiatlux.custom.block.MechaGridBlock;
 import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
+import art.boyko.fiatlux.mechamodule.base.IMechaModule;
 import art.boyko.fiatlux.init.ModBlockEntities;
 import art.boyko.fiatlux.init.ModBlocks;
 import art.boyko.fiatlux.init.ModCreativeTabs;
 import art.boyko.fiatlux.init.ModDataComponents;
 import art.boyko.fiatlux.init.ModItems;
+import art.boyko.fiatlux.init.ModModules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -61,6 +63,7 @@ public class FiatLux {
         ModBlockEntities.register(modEventBus); // Register block entities
         ModCreativeTabs.register(modEventBus);
         ModDataComponents.register(modEventBus); // Register data components
+        ModModules.initialize(modEventBus); // Initialize MechaModule system
 
         // Note that this is necessary if and only if we want *this* class (FiatLux) to respond directly to events.
         NeoForge.EVENT_BUS.register(this);
@@ -101,6 +104,8 @@ public class FiatLux {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModItems.LIGHT_SWORD);
             event.accept(ModItems.TORCH_ITEM);
+            // Add MechaModule items
+            event.accept(ModItems.TEST_MODULE_ITEM);
         }
         
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
@@ -162,7 +167,7 @@ public class FiatLux {
 
         if (player.isShiftKeyDown()) {
             // Shift + Left Click: Break the entire MechaGridBlock
-            mechaGrid.dropAllBlocks(level, pos);
+            // Note: Don't manually drop items here - onRemove() will handle it automatically
             level.destroyBlock(pos, false); // Destroy the block without dropping itself
             player.sendSystemMessage(Component.literal("MechaGridBlock broken and contents dropped!"));
         } else {
@@ -171,15 +176,16 @@ public class FiatLux {
             if (hitResult != null) {
                 MechaGridBlock.GridPos targetPos = mechaGridBlock.findTargetGridPositionForRemoval(player, pos, hitResult, mechaGrid);
                 if (targetPos != null) {
-                    BlockState removedBlock = mechaGrid.removeBlock(targetPos.x(), targetPos.y(), targetPos.z());
-                    if (removedBlock != null && !removedBlock.isAir()) {
-                        // Replaced Block.popResource with manual item drop to prevent breaking animation and sound
-                        ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, new ItemStack(removedBlock.getBlock()));
+                    IMechaModule removedModule = mechaGrid.removeModule(targetPos.x(), targetPos.y(), targetPos.z());
+                    if (removedModule != null) {
+                        // Use the correct toItemStack() method from the module
+                        ItemStack moduleStack = removedModule.toItemStack();
+                        ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, moduleStack);
                         itemEntity.setDefaultPickUpDelay();
                         level.addFreshEntity(itemEntity);
-                        player.sendSystemMessage(Component.literal("Removed " + removedBlock.getBlock().getName().getString() + " from [" + targetPos.x() + "," + targetPos.y() + "," + targetPos.z() + "]"));
+                        player.sendSystemMessage(Component.literal("Removed " + removedModule.getDisplayName().getString() + " from [" + targetPos.x() + "," + targetPos.y() + "," + targetPos.z() + "]"));
                     } else {
-                        player.sendSystemMessage(Component.literal("No block to remove at target position."));
+                        player.sendSystemMessage(Component.literal("No module to remove at target position."));
                     }
                 } else {
                     player.sendSystemMessage(Component.literal("No block found to remove."));

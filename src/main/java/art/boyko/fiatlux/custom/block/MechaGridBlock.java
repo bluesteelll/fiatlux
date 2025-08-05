@@ -2,6 +2,8 @@ package art.boyko.fiatlux.custom.block;
 
 import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
 import art.boyko.fiatlux.init.ModBlockEntities;
+import art.boyko.fiatlux.mechamodule.base.IMechaModule;
+import art.boyko.fiatlux.mechamodule.base.MechaModuleItem;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -71,24 +73,42 @@ public class MechaGridBlock extends BaseEntityBlock {
         // Handle sneaking (remove block) vs normal (place block)
         if (player.isShiftKeyDown()) {
             // This part is now handled by the attack method for Left Click
-            // We'll leave the right-click behavior for placing blocks
+            // We'll leave the right-click behavior for placing modules
             // For right-click, if shift is held, simply show grid status as before
-            int totalBlocks = mechaGrid.getTotalBlocks();
-            player.sendSystemMessage(Component.literal("MechaGrid: " + totalBlocks + "/64 blocks placed"));
+            int totalModules = mechaGrid.getTotalModules();
+            player.sendSystemMessage(Component.literal("MechaGrid: " + totalModules + "/64 modules placed"));
             return InteractionResult.SUCCESS;
         } else {
-            // Place block using ray tracing
-            if (!heldItem.isEmpty() && heldItem.getItem() instanceof BlockItem blockItem) {
+            // Place module or block using ray tracing
+            if (!heldItem.isEmpty()) {
                 GridPos targetPos = findPlacementPosition(player, pos, hitResult, mechaGrid);
                 
                 if (targetPos != null) {
-                    BlockState blockToPlace = blockItem.getBlock().defaultBlockState();
+                    boolean placed = false;
+                    String placedName = "";
                     
-                    if (mechaGrid.placeBlock(targetPos.x, targetPos.y, targetPos.z, blockToPlace)) {
+                    // Check if it's a MechaModule item
+                    if (MechaModuleItem.isMechaModuleItem(heldItem)) {
+                        IMechaModule module = MechaModuleItem.createModuleFromStack(heldItem);
+                        if (module != null && mechaGrid.placeModule(targetPos.x, targetPos.y, targetPos.z, module)) {
+                            placed = true;
+                            placedName = module.getDisplayName().getString();
+                        }
+                    }
+                    // Fallback to legacy BlockItem support
+                    else if (heldItem.getItem() instanceof BlockItem blockItem) {
+                        BlockState blockToPlace = blockItem.getBlock().defaultBlockState();
+                        if (mechaGrid.placeBlock(targetPos.x, targetPos.y, targetPos.z, blockToPlace)) {
+                            placed = true;
+                            placedName = blockToPlace.getBlock().getName().getString();
+                        }
+                    }
+                    
+                    if (placed) {
                         if (!player.getAbilities().instabuild) {
                             heldItem.shrink(1);
                         }
-                        player.sendSystemMessage(Component.literal("Placed " + blockToPlace.getBlock().getName().getString() + " at [" + targetPos.x + "," + targetPos.y + "," + targetPos.z + "]"));
+                        player.sendSystemMessage(Component.literal("Placed " + placedName + " at [" + targetPos.x + "," + targetPos.y + "," + targetPos.z + "]"));
                         return InteractionResult.SUCCESS;
                     }
                 } else {
@@ -96,9 +116,9 @@ public class MechaGridBlock extends BaseEntityBlock {
                     return InteractionResult.SUCCESS;
                 }
             } else {
-                // Show grid status when empty hand or non-block item
-                int totalBlocks = mechaGrid.getTotalBlocks();
-                player.sendSystemMessage(Component.literal("MechaGrid: " + totalBlocks + "/64 blocks placed"));
+                // Show grid status when empty hand
+                int totalModules = mechaGrid.getTotalModules();
+                player.sendSystemMessage(Component.literal("MechaGrid: " + totalModules + "/64 modules placed"));
                 return InteractionResult.SUCCESS;
             }
         }
@@ -254,7 +274,40 @@ public class MechaGridBlock extends BaseEntityBlock {
     }
 
     /**
-     * Find block to break position using ray tracing through the grid
+     * Handle module removal when player attacks the block
+     */
+    @Override
+    protected void attack(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player) {
+        if (level.isClientSide()) {
+            return;
+        }
+        
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof MechaGridBlockEntity mechaGrid)) {
+            return;
+        }
+        
+        // Find target position using ray tracing
+        BlockHitResult hitResult = getPlayerPOVHitResult(level, player, pos);
+        if (hitResult == null) {
+            return;
+        }
+        
+        GridPos targetPos = findTargetGridPositionForRemoval(player, pos, hitResult, mechaGrid);
+        if (targetPos != null) {
+            IMechaModule removedModule = mechaGrid.removeModule(targetPos.x, targetPos.y, targetPos.z);
+            if (removedModule != null) {
+                // Drop the module as an item
+                ItemStack moduleStack = removedModule.toItemStack();
+                Block.popResource(level, pos, moduleStack);
+                
+                player.sendSystemMessage(Component.literal("Removed " + removedModule.getDisplayName().getString() + " from [" + targetPos.x + "," + targetPos.y + "," + targetPos.z + "]"));
+            }
+        }
+    }
+    
+    /**
+     * Find module to break position using ray tracing through the grid
      */
     public GridPos findTargetGridPositionForRemoval(Player player, BlockPos blockPos, BlockHitResult hitResult, MechaGridBlockEntity mechaGrid) {
         // Get ray origin and direction
@@ -365,8 +418,8 @@ public class MechaGridBlock extends BaseEntityBlock {
         if (state.getBlock() != newState.getBlock()) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof MechaGridBlockEntity mechaGrid) {
-                // Drop all blocks stored in the grid
-                mechaGrid.dropAllBlocks(level, pos);
+                // Drop all modules stored in the grid
+                mechaGrid.dropAllModules(level, pos);
             }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);

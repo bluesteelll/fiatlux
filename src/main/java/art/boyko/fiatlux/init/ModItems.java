@@ -1,6 +1,11 @@
 package art.boyko.fiatlux.init;
 
 import art.boyko.fiatlux.FiatLux;
+import art.boyko.fiatlux.mechamodule.test.TestModuleItem;
+import art.boyko.fiatlux.mechamodule.modules.EnergyGeneratorModuleItem;
+import art.boyko.fiatlux.mechamodule.modules.EnergyStorageModuleItem;
+import art.boyko.fiatlux.mechamodule.modules.ProcessorModuleItem;
+import art.boyko.fiatlux.mechamodule.modules.DisplayModuleItem;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -92,6 +97,22 @@ public class ModItems {
             .stacksTo(1)
             .rarity(Rarity.UNCOMMON)
     );
+
+    // MechaModule items
+    public static final DeferredItem<TestModuleItem> TEST_MODULE_ITEM = 
+        ITEMS.register("test_module", TestModuleItem::new);
+    
+    public static final DeferredItem<EnergyGeneratorModuleItem> ENERGY_GENERATOR_MODULE_ITEM = 
+        ITEMS.register("energy_generator_module", EnergyGeneratorModuleItem::new);
+    
+    public static final DeferredItem<EnergyStorageModuleItem> ENERGY_STORAGE_MODULE_ITEM = 
+        ITEMS.register("energy_storage_module", EnergyStorageModuleItem::new);
+    
+    public static final DeferredItem<ProcessorModuleItem> PROCESSOR_MODULE_ITEM = 
+        ITEMS.register("processor_module", ProcessorModuleItem::new);
+    
+    public static final DeferredItem<DisplayModuleItem> DISPLAY_MODULE_ITEM = 
+        ITEMS.register("display_module", DisplayModuleItem::new);
 
     /**
      * Register all items to the event bus

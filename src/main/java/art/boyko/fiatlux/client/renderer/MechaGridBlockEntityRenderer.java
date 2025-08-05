@@ -1,6 +1,7 @@
 package art.boyko.fiatlux.client.renderer;
 
 import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
+import art.boyko.fiatlux.mechamodule.base.IMechaModule;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -30,27 +31,30 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
         // Scale factor to fit 4x4x4 grid into 1x1x1 block space
         float scale = 1.0f / MechaGridBlockEntity.GRID_SIZE;
         
-        BlockState[][][] grid = blockEntity.getGrid();
+        IMechaModule[][][] moduleGrid = blockEntity.getModuleGrid();
         long occupiedMask = blockEntity.getOccupiedMask();
         
         // Iterate through occupied positions only (performance optimization)
         for (int x = 0; x < MechaGridBlockEntity.GRID_SIZE; x++) {
             for (int y = 0; y < MechaGridBlockEntity.GRID_SIZE; y++) {
                 for (int z = 0; z < MechaGridBlockEntity.GRID_SIZE; z++) {
-                    // Check if position is occupied using bit mask (faster than checking if air)
+                    // Check if position is occupied using bit mask (faster than checking null)
                     int bitIndex = x + y * MechaGridBlockEntity.GRID_SIZE + z * MechaGridBlockEntity.GRID_SIZE * MechaGridBlockEntity.GRID_SIZE;
                     if ((occupiedMask & (1L << bitIndex)) == 0) {
                         continue; // Position is empty, skip
                     }
                     
-                    BlockState blockState = grid[x][y][z];
-                    if (blockState.isAir()) {
+                    IMechaModule module = moduleGrid[x][y][z];
+                    if (module == null) {
                         continue; // Safety check
                     }
                     
+                    // Get the render state from the module
+                    BlockState blockState = module.getRenderState();
+                    
                     poseStack.pushPose();
                     
-                    // Position the block within the grid
+                    // Position the module within the grid
                     float offsetX = x * scale;
                     float offsetY = y * scale;
                     float offsetZ = z * scale;
@@ -58,8 +62,11 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
                     poseStack.translate(offsetX, offsetY, offsetZ);
                     poseStack.scale(scale, scale, scale);
                     
-                    // Render the block with appropriate render type
-                    renderBlock(blockState, poseStack, bufferSource, packedLight, packedOverlay);
+                    // Render the module using its render state
+                    renderModule(module, blockState, poseStack, bufferSource, packedLight, packedOverlay);
+                    
+                    // TODO: Render connections between modules
+                    // renderModuleConnections(module, x, y, z, poseStack, bufferSource, packedLight, packedOverlay);
                     
                     poseStack.popPose();
                 }
@@ -69,10 +76,10 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
         poseStack.popPose();
     }
 
-    private void renderBlock(BlockState blockState, PoseStack poseStack, MultiBufferSource bufferSource, 
-                           int packedLight, int packedOverlay) {
+    private void renderModule(IMechaModule module, BlockState blockState, PoseStack poseStack, 
+                            MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         try {
-            // Render solid blocks
+            // Render module using its render state
             if (!blockState.canOcclude()) {
                 blockRenderer.renderSingleBlock(
                     blockState,
@@ -94,10 +101,34 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
                     RenderType.solid()
                 );
             }
+            
+            // TODO: Add special effects for active modules
+            // if (module.needsTicking() && module is active) {
+            //     renderModuleEffects(module, poseStack, bufferSource, packedLight, packedOverlay);
+            // }
+            
         } catch (Exception e) {
-            // Fallback - skip rendering problematic blocks
-            // This prevents crashes from mod blocks with rendering issues
+            // Fallback - skip rendering problematic modules
+            // This prevents crashes from mod modules with rendering issues
         }
+    }
+    
+    /**
+     * Render connections between modules (future enhancement)
+     */
+    private void renderModuleConnections(IMechaModule module, int x, int y, int z, PoseStack poseStack, 
+                                       MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        // TODO: Implement connection rendering
+        // This would show pipes, wires, etc. between connected modules
+        // For now, this is just a placeholder for future development
+    }
+    
+    /**
+     * Render special effects for active modules (future enhancement)
+     */
+    private void renderModuleEffects(IMechaModule module, PoseStack poseStack, 
+                                   MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+        // TODO: Add particle effects, glowing, etc. for active modules
     }
 
     @Override
@@ -112,7 +143,7 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
 
     @Override
     public boolean shouldRender(MechaGridBlockEntity blockEntity, net.minecraft.world.phys.Vec3 cameraPos) {
-        // Always render when in range and not empty
+        // Always render when in range and has modules
         return !blockEntity.isEmpty();
     }
 }

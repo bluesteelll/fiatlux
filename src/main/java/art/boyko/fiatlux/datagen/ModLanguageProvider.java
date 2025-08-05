@@ -18,6 +18,7 @@ public class ModLanguageProvider extends LanguageProvider {
         add("itemGroup.fiatlux", "Fiat Lux");
         add("itemGroup.fiatlux.blocks", "Fiat Lux - Blocks");
         add("itemGroup.fiatlux.tools", "Fiat Lux - Tools & Materials");
+        add("itemGroup.fiatlux.mecha_modules", "FiatLux - MechaModules");
         
         // Blocks
         addBlock(ModBlocks.EXAMPLE_BLOCK, "Example Block");
@@ -39,6 +40,13 @@ public class ModLanguageProvider extends LanguageProvider {
         addItem(ModItems.LIGHT_CRYSTAL, "Light Crystal");
         addItem(ModItems.COMPRESSED_COAL, "Compressed Coal");
         addItem(ModItems.TORCH_ITEM, "Eternal Torch");
+        
+        // MechaModule items
+        addItem(ModItems.TEST_MODULE_ITEM, "Test Module");
+        addItem(ModItems.ENERGY_GENERATOR_MODULE_ITEM, "Energy Generator Module");
+        addItem(ModItems.ENERGY_STORAGE_MODULE_ITEM, "Energy Storage Module");
+        addItem(ModItems.PROCESSOR_MODULE_ITEM, "Processor Module");
+        addItem(ModItems.DISPLAY_MODULE_ITEM, "Display Module");
         
         // Config translations
         add("fiatlux.configuration.title", "Fiat Lux Configs");
@@ -62,6 +70,7 @@ public class ModLanguageProvider extends LanguageProvider {
         add("itemGroup.fiatlux.tooltip", "Main Fiat Lux items and blocks");
         add("itemGroup.fiatlux.blocks.tooltip", "Decorative and functional blocks from Fiat Lux");
         add("itemGroup.fiatlux.tools.tooltip", "Tools, weapons and crafting materials from Fiat Lux");
+        add("itemGroup.fiatlux.mecha_modules.tooltip", "Modules for MechaGrid system");
         
         // BlockEntity related messages
         add("message.fiatlux.simple_storage.stored_items", "Stored items: %d");

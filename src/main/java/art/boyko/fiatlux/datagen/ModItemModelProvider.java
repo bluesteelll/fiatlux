@@ -26,6 +26,13 @@ public class ModItemModelProvider extends ItemModelProvider {
         
         handheldItem(ModItems.LIGHT_SWORD);
         
+        // MechaModule items
+        simpleItem(ModItems.TEST_MODULE_ITEM);
+        simpleItem(ModItems.ENERGY_GENERATOR_MODULE_ITEM);
+        simpleItem(ModItems.ENERGY_STORAGE_MODULE_ITEM);
+        simpleItem(ModItems.PROCESSOR_MODULE_ITEM);
+        simpleItem(ModItems.DISPLAY_MODULE_ITEM);
+        
         // Block items are automatically handled by ModBlockStateProvider via simpleBlockWithItem()
         // No need to create them here
     }
@@ -33,7 +40,7 @@ public class ModItemModelProvider extends ItemModelProvider {
     /**
      * Creates a simple item model with generated texture
      */
-    private ItemModelBuilder simpleItem(DeferredItem<Item> item) {
+    private ItemModelBuilder simpleItem(DeferredItem<? extends Item> item) {
         return withExistingParent(item.getId().getPath(),
                 ResourceLocation.parse("item/generated")).texture("layer0",
                 ResourceLocation.fromNamespaceAndPath(modid, "item/" + item.getId().getPath()));

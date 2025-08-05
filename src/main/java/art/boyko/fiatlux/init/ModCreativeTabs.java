@@ -78,6 +78,24 @@ public class ModCreativeTabs {
                 output.accept(ModItems.EXAMPLE_ITEM.get());
             }).build());
 
+    // MechaModules tab
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MECHA_MODULES_TAB = 
+        CREATIVE_MODE_TABS.register("mecha_modules_tab", () -> CreativeModeTab.builder()
+            .title(Component.translatable("itemGroup.fiatlux.mecha_modules"))
+            .withTabsBefore(CreativeModeTabs.TOOLS_AND_UTILITIES)
+            .icon(() -> ModItems.TEST_MODULE_ITEM.get().getDefaultInstance())
+            .displayItems((parameters, output) -> {
+                // Add MechaGrid block first
+                output.accept(ModItems.MECHA_GRID_BLOCK_ITEM.get());
+                
+                // Add all MechaModules
+                output.accept(ModItems.TEST_MODULE_ITEM.get());
+                output.accept(ModItems.ENERGY_GENERATOR_MODULE_ITEM.get());
+                output.accept(ModItems.ENERGY_STORAGE_MODULE_ITEM.get());
+                output.accept(ModItems.PROCESSOR_MODULE_ITEM.get());
+                output.accept(ModItems.DISPLAY_MODULE_ITEM.get());
+            }).build());
+
     /**
      * Register all creative mode tabs to the event bus
      * This method should be called in the mod constructor
