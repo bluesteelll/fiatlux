@@ -55,6 +55,7 @@ public class MechaGridBlockEntity extends BlockEntity {
 
     public MechaGridBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MECHA_GRID_BE.get(), pos, blockState);
+        System.out.println("🏭 MechaGridBlockEntity CONSTRUCTOR CALLED at " + pos);
         initializeGrid();
     }
 
@@ -80,6 +81,11 @@ public class MechaGridBlockEntity extends BlockEntity {
         }
         
         currentTick++;
+        
+        // ОЧЕНЬ базовая диагностика - каждые 5 секунд
+        if (currentTick % 100 == 0) {
+            System.out.println("🕐 MechaGridBlockEntity.tick() - currentTick: " + currentTick + ", tickingModules: " + tickingModules.size());
+        }
         
         // Process scheduled updates
         processScheduledUpdates();
@@ -108,10 +114,17 @@ public class MechaGridBlockEntity extends BlockEntity {
     }
     
     private void tickModules() {
+        if (currentTick % 20 == 0) { // Every second
+            System.out.println("🎯 MechaGridBlockEntity: Ticking " + tickingModules.size() + " modules at tick " + currentTick);
+        }
+        
         for (IModuleContext context : tickingModules) {
             ModuleContext moduleContext = (ModuleContext) context;
             IMechaModule module = moduleContext.getOwnerModule();
             if (module != null && module.needsTicking()) {
+                if (currentTick % 20 == 0) { // Every second
+                    System.out.println("⚡ MechaGridBlockEntity: Ticking module " + module.getModuleId());
+                }
                 module.tick(context);
             }
         }
@@ -126,7 +139,10 @@ public class MechaGridBlockEntity extends BlockEntity {
      * @return true if successfully placed, false if position was occupied
      */
     public boolean placeModule(int x, int y, int z, IMechaModule module) {
+        System.out.println("🏗️ MechaGridBlockEntity.placeModule() CALLED at [" + x + "," + y + "," + z + "] with module: " + (module != null ? module.getModuleId() : "null"));
+        
         if (!isValidPosition(x, y, z) || module == null) {
+            System.out.println("❌ placeModule FAILED: invalid position or null module");
             return false;
         }
 
@@ -154,6 +170,9 @@ public class MechaGridBlockEntity extends BlockEntity {
         // Add to ticking list if needed
         if (module.needsTicking()) {
             tickingModules.add(context);
+            System.out.println("🔧 MechaGridBlockEntity: Added module " + module.getModuleId() + " to ticking list. Total ticking modules: " + tickingModules.size());
+        } else {
+            System.out.println("⚠️ MechaGridBlockEntity: Module " + module.getModuleId() + " does NOT need ticking!");
         }
         
         // Notify neighbors
@@ -438,6 +457,7 @@ public class MechaGridBlockEntity extends BlockEntity {
             level.neighborChanged(worldPosition, blockState.getBlock(), worldPosition);
         }
     }
+    
     
     /**
      * Notify neighboring modules when a module is placed or removed

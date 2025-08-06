@@ -37,6 +37,7 @@ public class MechaGridBlock extends BaseEntityBlock {
 
     public MechaGridBlock(Properties properties) {
         super(properties);
+        System.out.println("🏗️ MechaGridBlock CONSTRUCTOR CALLED!");
     }
 
     @Override
@@ -46,21 +47,34 @@ public class MechaGridBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
+        System.out.println("🏭 MechaGridBlock.newBlockEntity() CALLED at " + pos);
         return new MechaGridBlockEntity(pos, state);
     }
 
     @Override
     protected InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hitResult) {
+        System.out.println("📞 MechaGridBlock.useWithoutItem() CALLED - isClientSide: " + level.isClientSide());
         return handleInteraction(state, level, pos, player, hitResult, ItemStack.EMPTY);
     }
 
     @Override
     protected ItemInteractionResult useItemOn(@Nonnull ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
+        System.out.println("📞 MechaGridBlock.useItemOn() CALLED - Item: " + stack.getItem().getDescriptionId() + ", isClientSide: " + level.isClientSide());
         InteractionResult result = handleInteraction(state, level, pos, player, hitResult, stack);
         return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS : ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
+    // ЭКСТРЕННАЯ МЕРА: Добавим старый метод взаимодействия для совместимости
+    @SuppressWarnings("deprecation")
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+        System.out.println("🆘 LEGACY MechaGridBlock.use() CALLED - Hand: " + hand + ", isClientSide: " + level.isClientSide());
+        ItemStack heldItem = player.getItemInHand(hand);
+        return handleInteraction(state, level, pos, player, hitResult, heldItem);
+    }
+
     private InteractionResult handleInteraction(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull BlockHitResult hitResult, ItemStack heldItem) {
+        System.out.println("👆 MechaGridBlock.handleInteraction() - Item: " + (heldItem.isEmpty() ? "EMPTY" : heldItem.getItem().getDescriptionId()) + ", isClientSide: " + level.isClientSide());
+        
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
@@ -89,7 +103,9 @@ public class MechaGridBlock extends BaseEntityBlock {
                     
                     // Check if it's a MechaModule item
                     if (MechaModuleItem.isMechaModuleItem(heldItem)) {
+                        System.out.println("📦 MechaGridBlock: Detected MechaModule item: " + heldItem.getItem().getDescriptionId());
                         IMechaModule module = MechaModuleItem.createModuleFromStack(heldItem);
+                        System.out.println("🔧 MechaGridBlock: Created module: " + (module != null ? module.getModuleId() : "null"));
                         if (module != null && mechaGrid.placeModule(targetPos.x, targetPos.y, targetPos.z, module)) {
                             placed = true;
                             placedName = module.getDisplayName().getString();
@@ -116,7 +132,21 @@ public class MechaGridBlock extends BaseEntityBlock {
                     return InteractionResult.SUCCESS;
                 }
             } else {
-                // Show grid status when empty hand
+                // Try to open module GUI if right-clicking on a module
+                GridPos targetPos = findTargetGridPositionForRemoval(player, pos, hitResult, mechaGrid);
+                if (targetPos != null) {
+                    IMechaModule module = mechaGrid.getModule(targetPos.x, targetPos.y, targetPos.z);
+                    if (module != null && module.hasGui()) {
+                        art.boyko.fiatlux.mechamodule.context.IModuleContext.GridPosition gridPosition = 
+                            new art.boyko.fiatlux.mechamodule.context.IModuleContext.GridPosition(targetPos.x, targetPos.y, targetPos.z);
+                        art.boyko.fiatlux.mechamodule.context.ModuleContext moduleContext = 
+                            new art.boyko.fiatlux.mechamodule.context.ModuleContext(mechaGrid, gridPosition, module);
+                        module.openGui(moduleContext, player);
+                        return InteractionResult.SUCCESS;
+                    }
+                }
+                
+                // Show grid status when empty hand and not targeting a module
                 int totalModules = mechaGrid.getTotalModules();
                 player.sendSystemMessage(Component.literal("MechaGrid: " + totalModules + "/64 modules placed"));
                 return InteractionResult.SUCCESS;

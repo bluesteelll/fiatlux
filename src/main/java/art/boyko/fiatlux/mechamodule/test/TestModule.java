@@ -6,6 +6,7 @@ import art.boyko.fiatlux.mechamodule.base.ModuleProperties;
 import art.boyko.fiatlux.mechamodule.capability.ConnectionType;
 import art.boyko.fiatlux.mechamodule.capability.IModuleCapability;
 import art.boyko.fiatlux.mechamodule.capability.ModuleConnection;
+import art.boyko.fiatlux.mechamodule.capability.standard.EnergyCapability;
 import art.boyko.fiatlux.mechamodule.context.IModuleContext;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -48,8 +49,8 @@ public class TestModule extends AbstractMechaModule {
     
     @Override
     protected void initializeCapabilities() {
-        // Add a simple energy capability
-        addCapability(TestEnergyCapability.class, new TestEnergyCapability(this));
+        // Add unified energy capability
+        addCapability(EnergyCapability.class, new EnergyCapability(this, new TestEnergyProvider()));
     }
     
     @Override
@@ -59,21 +60,28 @@ public class TestModule extends AbstractMechaModule {
     
     @Override
     protected void onActivated() {
-        System.out.println("TestModule activated at position: " + 
-                          (getContext() != null ? getContext().getGridPosition() : "unknown"));
+        // Module activated - ready for operation
+    }
+    
+    @Override
+    public void onPlacedInGrid(art.boyko.fiatlux.mechamodule.context.IModuleContext context) {
+        super.onPlacedInGrid(context);
     }
     
     @Override
     protected void onDeactivated() {
-        System.out.println("TestModule deactivated");
+        // Module deactivated
     }
     
     @Override
     protected void onTick(IModuleContext context) {
         // Generate energy
+        int oldEnergy = energyStored;
         if (energyStored < maxEnergy) {
             energyStored = Math.min(maxEnergy, energyStored + energyPerTick);
         }
+        
+        // Energy generated successfully
         
         // Try to share energy with neighbors
         distributeEnergy(context);
@@ -84,39 +92,42 @@ public class TestModule extends AbstractMechaModule {
             return;
         }
         
-        // Find neighbors with energy capabilities
-        var energyCapabilities = context.findCapabilities(TestEnergyCapability.class);
+        // Try to distribute energy to neighbors
+        
+        // Find neighbors with energy capabilities (now unified!)
+        var energyCapabilities = context.findCapabilities(EnergyCapability.class);
         
         if (energyCapabilities.isEmpty()) {
             return;
         }
         
-        int energyPerNeighbor = energyStored / energyCapabilities.size();
+        int energyPerNeighbor = Math.min(energyStored / energyCapabilities.size(), 50); // Max 50 RF per neighbor per tick
         if (energyPerNeighbor <= 0) {
             return;
         }
         
+        // Distribute energy to all neighbors with energy capabilities
         for (var entry : energyCapabilities.entrySet()) {
+            if (energyStored <= 0) break;
+            
             Direction direction = entry.getKey();
-            TestEnergyCapability neighborCapability = entry.getValue();
+            EnergyCapability neighborCapability = entry.getValue();
             
-            int transferred = neighborCapability.receiveEnergy(energyPerNeighbor, false);
-            energyStored -= transferred;
-            
-            if (energyStored <= 0) {
-                break;
+            // Only transfer to neighbors that can receive energy
+            if (neighborCapability.canReceive()) {
+                int transferred = neighborCapability.receiveEnergy(energyPerNeighbor, false);
+                energyStored -= transferred;
+                
+                // Energy transferred successfully
             }
         }
     }
     
     @Override
     public void onNeighborChanged(IModuleContext context, Direction direction, @Nullable IMechaModule neighbor) {
-        System.out.println("TestModule neighbor changed in direction " + direction.name() + 
-                          ": " + (neighbor != null ? neighbor.getModuleId() : "removed"));
-        
         if (neighbor != null) {
-            // Try to establish energy connection
-            context.establishConnection(direction, TestEnergyCapability.class);
+            // Try to establish energy connection with unified capability
+            context.establishConnection(direction, EnergyCapability.class);
         }
     }
     
@@ -153,109 +164,50 @@ public class TestModule extends AbstractMechaModule {
     }
     
     /**
-     * Simple energy capability implementation for testing
+     * Energy provider implementation for TestModule
      */
-    public static class TestEnergyCapability implements IModuleCapability {
-        
-        private final TestModule owner;
-        
-        public TestEnergyCapability(TestModule owner) {
-            this.owner = owner;
-        }
+    public class TestEnergyProvider implements EnergyCapability.EnergyProvider {
         
         @Override
-        public ResourceLocation getCapabilityId() {
-            return ResourceLocation.fromNamespaceAndPath("fiatlux", "test_energy");
-        }
-        
-        @Override
-        public IMechaModule getOwnerModule() {
-            return owner;
-        }
-        
-        @Override
-        public boolean canConnectTo(Direction direction, IModuleCapability other) {
-            return other instanceof TestEnergyCapability;
-        }
-        
-        @Override
-        public void onConnectionEstablished(Direction direction, IModuleCapability other, ModuleConnection connection) {
-            System.out.println("Energy connection established: " + direction.name());
-        }
-        
-        @Override
-        public void onConnectionBroken(Direction direction, IModuleCapability other) {
-            System.out.println("Energy connection broken: " + direction.name());
-        }
-        
-        @Override
-        public boolean needsTicking() {
-            return false; // Energy management is handled by the module itself
-        }
-        
-        @Override
-        public boolean supportsConnectionType(ConnectionType connectionType) {
-            return connectionType.canTransferEnergy();
-        }
-        
-        /**
-         * Receive energy from another source
-         * @param maxReceive Maximum amount to receive
-         * @param simulate If true, don't actually receive the energy
-         * @return Amount actually received
-         */
         public int receiveEnergy(int maxReceive, boolean simulate) {
-            int energyReceived = Math.min(maxReceive, owner.maxEnergy - owner.energyStored);
+            int energyReceived = Math.min(maxReceive, maxEnergy - energyStored);
             
             if (!simulate && energyReceived > 0) {
-                owner.energyStored += energyReceived;
+                energyStored += energyReceived;
             }
             
             return energyReceived;
         }
         
-        /**
-         * Extract energy to another destination
-         * @param maxExtract Maximum amount to extract
-         * @param simulate If true, don't actually extract the energy
-         * @return Amount actually extracted
-         */
+        @Override
         public int extractEnergy(int maxExtract, boolean simulate) {
-            int energyExtracted = Math.min(maxExtract, owner.energyStored);
+            int energyExtracted = Math.min(maxExtract, energyStored);
             
             if (!simulate && energyExtracted > 0) {
-                owner.energyStored -= energyExtracted;
+                energyStored -= energyExtracted;
             }
             
             return energyExtracted;
         }
         
-        /**
-         * Get the current energy stored
-         */
+        @Override
         public int getEnergyStored() {
-            return owner.energyStored;
+            return energyStored;
         }
         
-        /**
-         * Get the maximum energy capacity
-         */
+        @Override
         public int getMaxEnergyStored() {
-            return owner.maxEnergy;
+            return maxEnergy;
         }
         
-        /**
-         * Check if this capability can receive energy
-         */
+        @Override
         public boolean canReceive() {
-            return owner.energyStored < owner.maxEnergy;
+            return energyStored < maxEnergy;
         }
         
-        /**
-         * Check if this capability can extract energy
-         */
+        @Override
         public boolean canExtract() {
-            return owner.energyStored > 0;
+            return energyStored > 0;
         }
     }
 }

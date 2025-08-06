@@ -64,6 +64,7 @@ public class FiatLux {
         ModCreativeTabs.register(modEventBus);
         ModDataComponents.register(modEventBus); // Register data components
         ModModules.initialize(modEventBus); // Initialize MechaModule system
+        art.boyko.fiatlux.init.ModMenuTypes.register(modEventBus); // Register GUI menus
 
         // Note that this is necessary if and only if we want *this* class (FiatLux) to respond directly to events.
         NeoForge.EVENT_BUS.register(this);

@@ -6,6 +6,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -243,5 +244,40 @@ public abstract class AbstractMechaModule implements IMechaModule {
      */
     protected boolean isActive() {
         return isActive;
+    }
+    
+    @Override
+    public boolean hasGui() {
+        return true; // Default implementation: most modules have basic GUI
+    }
+    
+    @Override
+    public void openGui(IModuleContext context, Player player) {
+        if (context == null || !isActive) {
+            return;
+        }
+        
+        // Open basic module GUI
+        openModuleGui(context, player);
+    }
+    
+    protected void openModuleGui(IModuleContext context, Player player) {
+        if (player.level().isClientSide()) {
+            return;
+        }
+        
+        // Get grid position from context
+        net.minecraft.core.BlockPos worldPos = context.getWorldPosition();
+        IModuleContext.GridPosition gridPos = context.getGridPosition();
+        
+        // Calculate module coordinates within the grid
+        int moduleX = gridPos.x();
+        int moduleY = gridPos.y();
+        int moduleZ = gridPos.z();
+        
+        // Open GUI through network
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            art.boyko.fiatlux.network.NetworkHandler.openModuleGui(serverPlayer, worldPos, moduleX, moduleY, moduleZ);
+        }
     }
 }

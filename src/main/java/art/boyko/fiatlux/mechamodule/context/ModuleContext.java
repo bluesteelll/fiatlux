@@ -46,6 +46,13 @@ public class ModuleContext implements IModuleContext {
         return gridPosition;
     }
     
+    /**
+     * Get the module that owns this context
+     */
+    public IMechaModule getOwnerModule() {
+        return ownerModule;
+    }
+    
     @Override
     public BlockPos getWorldPosition() {
         return mechaGrid.getBlockPos();
@@ -112,16 +119,22 @@ public class ModuleContext implements IModuleContext {
     }
     
     @Override
+    @SuppressWarnings("unchecked")
     public <T extends IModuleCapability> Map<Direction, T> findCapabilities(Class<T> capabilityType) {
-        Map<Direction, T> capabilities = new EnumMap<>(Direction.class);
+        Map<Direction, T> found = new HashMap<>();
         
         for (Direction direction : Direction.values()) {
-            Optional<T> capability = getNeighborCapability(direction, capabilityType);
-            capability.ifPresent(cap -> capabilities.put(direction, cap));
+            IMechaModule neighbor = getNeighbor(direction);
+            if (neighbor != null) {
+                Optional<T> capability = neighbor.getCapability(direction.getOpposite(), capabilityType);
+                if (capability.isPresent()) {
+                    found.put(direction, capability.get());
+                }
+            }
         }
-        
-        return capabilities;
+        return found;
     }
+    
     
     @Override
     public List<ModuleConnection> getConnections() {
@@ -144,7 +157,7 @@ public class ModuleContext implements IModuleContext {
             return false;
         }
         
-        // Get capabilities from both modules
+        // Get capabilities from both modules (same type now with unified capabilities!)
         Optional<? extends IModuleCapability> sourceCapability = ownerModule.getCapability(direction, capabilityType);
         Optional<? extends IModuleCapability> targetCapability = neighbor.getCapability(direction.getOpposite(), capabilityType);
         
@@ -311,10 +324,4 @@ public class ModuleContext implements IModuleContext {
         needsUpdate = false;
     }
     
-    /**
-     * Get the owner module of this context
-     */
-    public IMechaModule getOwnerModule() {
-        return ownerModule;
-    }
 }

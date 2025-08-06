@@ -6,6 +6,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -116,4 +117,22 @@ public interface IMechaModule {
      * @return true if connection is possible
      */
     boolean canConnectTo(Direction direction, IMechaModule neighbor);
+    
+    /**
+     * Check if this module has a GUI that can be opened
+     * @return true if module has GUI
+     */
+    default boolean hasGui() {
+        return false;
+    }
+    
+    /**
+     * Called when player right-clicks on this module to open GUI
+     * This method should open the appropriate GUI screen
+     * @param context The module context
+     * @param player The player opening the GUI
+     */
+    default void openGui(IModuleContext context, Player player) {
+        // Default implementation does nothing
+    }
 }

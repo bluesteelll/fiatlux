@@ -62,7 +62,10 @@ public class MechaModuleItem extends Item {
      * Check if this item is a MechaModule item
      */
     public static boolean isMechaModuleItem(ItemStack stack) {
-        return stack.getItem() instanceof MechaModuleItem;
+        boolean result = stack.getItem() instanceof MechaModuleItem;
+        System.out.println("🔍 isMechaModuleItem() check: " + stack.getItem().getDescriptionId() + 
+                          " -> " + result + " (class: " + stack.getItem().getClass().getSimpleName() + ")");
+        return result;
     }
     
     /**
@@ -71,10 +74,13 @@ public class MechaModuleItem extends Item {
     @Nullable
     public static IMechaModule createModuleFromStack(ItemStack stack) {
         if (!isMechaModuleItem(stack)) {
+            System.out.println("❌ createModuleFromStack() FAILED: not a MechaModuleItem");
             return null;
         }
         
         MechaModuleItem moduleItem = (MechaModuleItem) stack.getItem();
-        return moduleItem.createModule();
+        IMechaModule module = moduleItem.createModule();
+        System.out.println("✅ createModuleFromStack() SUCCESS: created " + (module != null ? module.getModuleId() : "null"));
+        return module;
     }
 }
