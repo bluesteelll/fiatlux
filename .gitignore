@@ -13,13 +13,29 @@ out
 *.iml
 .idea
 
+# gradle
+build
+.gradle
+
+# rust
+rust-ecs/target/
+rust-ecs/Cargo.lock
+*.so
+*.dll
+*.dylib
+*.lib
+*.a
+
+# temporary files
 *.json
 *.cache
 *.png
 
-# gradle
-build
-.gradle
+# documentation (keep specific docs)
+*.md
+!README.md
+!CLAUDE.md
+!RUST_ECS_ENERGY_SYSTEM.md
 
 # other
 eclipse

@@ -1,6 +1,6 @@
 package art.boyko.fiatlux.client.renderer;
 
-import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
+import art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity;
 import art.boyko.fiatlux.mechamodule.base.IMechaModule;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -11,7 +11,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
-public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGridBlockEntity> {
+public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity> {
     private final BlockRenderDispatcher blockRenderer;
 
     public MechaGridBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
@@ -19,7 +19,7 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
     }
 
     @Override
-    public void render(MechaGridBlockEntity blockEntity, float partialTick, PoseStack poseStack, 
+    public void render(art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity blockEntity, float partialTick, PoseStack poseStack, 
                       MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
         
         if (blockEntity.isEmpty()) {
@@ -29,17 +29,17 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
         poseStack.pushPose();
         
         // Scale factor to fit 4x4x4 grid into 1x1x1 block space
-        float scale = 1.0f / MechaGridBlockEntity.GRID_SIZE;
+        float scale = 1.0f / art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE;
         
         IMechaModule[][][] moduleGrid = blockEntity.getModuleGrid();
         long occupiedMask = blockEntity.getOccupiedMask();
         
         // Iterate through occupied positions only (performance optimization)
-        for (int x = 0; x < MechaGridBlockEntity.GRID_SIZE; x++) {
-            for (int y = 0; y < MechaGridBlockEntity.GRID_SIZE; y++) {
-                for (int z = 0; z < MechaGridBlockEntity.GRID_SIZE; z++) {
+        for (int x = 0; x < art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE; x++) {
+            for (int y = 0; y < art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE; y++) {
+                for (int z = 0; z < art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE; z++) {
                     // Check if position is occupied using bit mask (faster than checking null)
-                    int bitIndex = x + y * MechaGridBlockEntity.GRID_SIZE + z * MechaGridBlockEntity.GRID_SIZE * MechaGridBlockEntity.GRID_SIZE;
+                    int bitIndex = x + y * art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE + z * art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE * art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity.GRID_SIZE;
                     if ((occupiedMask & (1L << bitIndex)) == 0) {
                         continue; // Position is empty, skip
                     }
@@ -132,7 +132,7 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
     }
 
     @Override
-    public boolean shouldRenderOffScreen(MechaGridBlockEntity blockEntity) {
+    public boolean shouldRenderOffScreen(art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity blockEntity) {
         return false; // Only render when on screen for performance
     }
 
@@ -142,7 +142,7 @@ public class MechaGridBlockEntityRenderer implements BlockEntityRenderer<MechaGr
     }
 
     @Override
-    public boolean shouldRender(MechaGridBlockEntity blockEntity, net.minecraft.world.phys.Vec3 cameraPos) {
+    public boolean shouldRender(art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity blockEntity, net.minecraft.world.phys.Vec3 cameraPos) {
         // Always render when in range and has modules
         return !blockEntity.isEmpty();
     }

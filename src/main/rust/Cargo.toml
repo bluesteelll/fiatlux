@@ -1,0 +1,11 @@
+[package]
+name = "fiatlux-ecs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+bevy_ecs = "0.14"
+jni = "0.21"

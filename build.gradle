@@ -135,6 +135,58 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 }
 
+// Rust/JNI integration tasks
+tasks.register('buildRustLibrary', Exec) {
+    description = 'Build Rust library for JNI'
+    group = 'rust'
+    
+    workingDir = file('rust-ecs')
+    
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        commandLine 'cargo', 'build', '--release'
+    } else {
+        commandLine 'sh', '-c', 'cargo build --release'
+    }
+}
+
+tasks.register('copyRustLibrary', Copy) {
+    description = 'Copy Rust library to resources'
+    group = 'rust'
+    dependsOn tasks.buildRustLibrary
+    
+    from 'rust-ecs/target/release/'
+    into 'src/main/resources/natives/'
+    
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        include '*.dll'
+        rename { String filename ->
+            if (filename.startsWith('fiatlux_ecs')) {
+                return 'fiatlux_ecs.dll'
+            }
+            return filename
+        }
+    } else if (org.gradle.internal.os.OperatingSystem.current().isMacOsX()) {
+        include '*.dylib'
+        rename { String filename ->
+            if (filename.startsWith('libfiatlux_ecs')) {
+                return 'libfiatlux_ecs.dylib'
+            }
+            return filename
+        }
+    } else {
+        include '*.so'
+        rename { String filename ->
+            if (filename.startsWith('libfiatlux_ecs')) {
+                return 'libfiatlux_ecs.so'
+            }
+            return filename
+        }
+    }
+}
+
+// Make sure Rust library is built and copied before processing resources
+processResources.dependsOn(tasks.copyRustLibrary)
+
 // This block of code expands all declared replace properties in the specified resource targets.
 // A missing property will result in an error. Properties are expanded using ${} Groovy notation.
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -170,7 +222,7 @@ publishing {
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            url = "file://${project.projectDir}/repo"
         }
     }
 }

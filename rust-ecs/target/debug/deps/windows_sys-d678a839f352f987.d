@@ -1,0 +1,10 @@
+D:\MinecraftDev\fiatlux\rust-ecs\target\debug\deps\libwindows_sys-d678a839f352f987.rmeta: C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\lib.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\Win32\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\Win32\Globalization\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\core\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\core\literals.rs
+
+D:\MinecraftDev\fiatlux\rust-ecs\target\debug\deps\windows_sys-d678a839f352f987.d: C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\lib.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\Win32\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\Win32\Globalization\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\core\mod.rs C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\core\literals.rs
+
+C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\lib.rs:
+C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\mod.rs:
+C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\Win32\mod.rs:
+C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\Windows\Win32\Globalization\mod.rs:
+C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\core\mod.rs:
+C:\Users\flint\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-sys-0.45.0\src\core\literals.rs:

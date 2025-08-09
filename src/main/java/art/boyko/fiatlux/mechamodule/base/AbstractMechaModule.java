@@ -277,7 +277,7 @@ public abstract class AbstractMechaModule implements IMechaModule {
         
         // Open GUI through network
         if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-            art.boyko.fiatlux.network.NetworkHandler.openModuleGui(serverPlayer, worldPos, moduleX, moduleY, moduleZ);
+            art.boyko.fiatlux.common.network.NetworkHandler.openModuleGui(serverPlayer, worldPos, moduleX, moduleY, moduleZ);
         }
     }
 }

@@ -1,7 +1,7 @@
 package art.boyko.fiatlux.client.renderer;
 
-import art.boyko.fiatlux.FiatLux;
-import art.boyko.fiatlux.init.ModBlockEntities;
+import art.boyko.fiatlux.server.FiatLux;
+import art.boyko.fiatlux.server.init.ModBlockEntities;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

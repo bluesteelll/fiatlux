@@ -1,6 +1,6 @@
 package art.boyko.fiatlux.mechamodule.context;
 
-import art.boyko.fiatlux.custom.blockentity.MechaGridBlockEntity;
+import art.boyko.fiatlux.server.blockentity.MechaGridBlockEntity;
 import art.boyko.fiatlux.mechamodule.base.IMechaModule;
 import art.boyko.fiatlux.mechamodule.capability.IModuleCapability;
 import art.boyko.fiatlux.mechamodule.capability.ModuleConnection;
