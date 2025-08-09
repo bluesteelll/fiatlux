@@ -41,6 +41,14 @@ public interface IModuleContext {
      */
     MechaGridBlockEntity getMechaGrid();
     
+    /**
+     * Get the MechaGrid block entity containing this module (alias for getMechaGrid)
+     * Used by Rust-backed modules for consistency
+     */
+    default MechaGridBlockEntity getGridEntity() {
+        return getMechaGrid();
+    }
+    
     // Neighbor Access
     
     /**

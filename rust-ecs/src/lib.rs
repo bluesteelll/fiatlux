@@ -17,3 +17,7 @@ pub use events::*;
 // Batch processing configuration
 pub const BATCH_INTERVAL: u64 = 4;
 
+// Synchronization configuration
+pub const SYNC_INTERVAL_TICKS: u64 = 5; // 4 times per second at 20 TPS
+pub const MAX_SYNC_BATCH_SIZE: usize = 64; // Max modules per sync batch
+

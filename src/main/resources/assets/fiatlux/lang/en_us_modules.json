@@ -1,0 +1,22 @@
+{
+  "item.fiatlux.test_module": "Test Module",
+  "module.fiatlux.test_module": "Test Module",
+  
+  "item.fiatlux.energy_generator_module": "Energy Generator Module",
+  "module.fiatlux.energy_generator_module": "Energy Generator Module",
+  
+  "item.fiatlux.energy_storage_module": "Energy Storage Module", 
+  "module.fiatlux.energy_storage_module": "Energy Storage Module",
+  
+  "item.fiatlux.processor_module": "Processor Module",
+  "module.fiatlux.processor_module": "Processor Module",
+  
+  "item.fiatlux.display_module": "Display Module",
+  "module.fiatlux.display_module": "Display Module",
+  
+  "itemGroup.fiatlux.mecha_modules": "FiatLux - MechaModules",
+  
+  "tooltip.fiatlux.mecha_module": "Place in MechaGrid",
+  "tooltip.fiatlux.energy_consumption": "Consumes: %s RF/t",
+  "tooltip.fiatlux.energy_production": "Produces: %s RF/t"
+}

@@ -1,46 +1,83 @@
-# eclipse
-bin
+# ==== IDE Files ====
+# Eclipse
+bin/
 *.launch
-.settings
-.metadata
+.settings/
+.metadata/
 .classpath
 .project
 
-# idea
-out
+# IntelliJ IDEA
+out/
 *.ipr
 *.iws
 *.iml
-.idea
+.idea/
 
-# gradle
-build
-.gradle
+# VS Code
+.vscode/
 
-# rust
+# ==== Build Systems ====
+# Gradle
+build/
+.gradle/
+gradle-app.setting
+
+# Rust
 rust-ecs/target/
 rust-ecs/Cargo.lock
+
+# ==== Native Libraries ====
 *.so
 *.dll
 *.dylib
 *.lib
 *.a
+*.pdb
+*.exp
 
-# temporary files
-*.json
-*.cache
-*.png
+# ==== Minecraft Development ====
+# Run directories
+run/
+runs/
+run-data/
+eclipse/
 
-# documentation (keep specific docs)
+# Minecraft logs and crash reports
+logs/
+crash-reports/
+
+# ==== Generated Files ====
+# Generated resources (keep src/generated/resources)
+/src/generated/
+!src/generated/resources/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# ==== OS Files ====
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ==== Documentation ====
+# Exclude all markdown files as requested
 *.md
-!README.md
-!CLAUDE.md
-!RUST_ECS_ENERGY_SYSTEM.md
 
-# other
-eclipse
-run
-runs
-run-data
-
-repo
+# ==== Miscellaneous ====
+repo/
+*.cache
+.factorypath

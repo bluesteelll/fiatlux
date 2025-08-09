@@ -132,7 +132,7 @@ public class FiatLux {
     public void onServerStopping(ServerStoppingEvent event) {
         // Clean up ECS resources when server stops
         LOGGER.info("Cleaning up Bevy ECS resources...");
-        art.boyko.fiatlux.server.ecs.EcsManager.shutdown();
+        art.boyko.fiatlux.ecs.EcsManager.shutdown();
     }
 
     @SubscribeEvent

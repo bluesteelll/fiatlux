@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(./gradlew:*)",
+      "Bash(mkdir:*)",
+      "Bash(move:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(copy magic_gem.png test_module.png)",
+      "Bash(cp:*)",
+      "Bash(grep:*)",
+      "Bash(cargo --version)",
+      "Bash(cargo check:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo:*)",
+      "Bash(for:*)",
+      "Bash(do cp \"D:\\MinecraftDev\\fiatlux\\src\\main\\java\\art\\boyko\\fiatlux\\custom\\module$file\" \"D:\\MinecraftDev\\fiatlux\\src\\main\\java\\art\\boyko\\fiatlux\\common\\module$file\")",
+      "Bash(done)",
+      "Bash(git log:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(ls:*)",
+      "Bash(touch:*)",
+      "Bash(find:*)",
+      "Bash(unzip:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

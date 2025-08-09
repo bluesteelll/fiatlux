@@ -6,11 +6,15 @@ pub mod world_management;
 pub mod entity_operations;
 pub mod energy_operations;
 pub mod batch_operations;
+pub mod sync_operations;
+pub mod module_management;
 
 pub use world_management::*;
 pub use entity_operations::*;
 pub use energy_operations::*;
 pub use batch_operations::*;
+pub use sync_operations::*;
+pub use module_management::*;
 
 /// Helper function to convert Java string to Rust string
 pub fn jstring_to_string(env: &mut JNIEnv, jstring: JString) -> Result<String, Box<dyn std::error::Error>> {

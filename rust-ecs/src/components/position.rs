@@ -8,6 +8,20 @@ pub struct ModulePosition {
     pub z: i32,
 }
 
+/// Component representing the world position of the MechaGrid block that contains this module
+#[derive(Component, Clone, Copy, Debug)]
+pub struct WorldPosition {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl WorldPosition {
+    pub fn new(x: i32, y: i32, z: i32) -> Self {
+        Self { x, y, z }
+    }
+}
+
 impl ModulePosition {
     pub fn new(x: i32, y: i32, z: i32) -> Self {
         Self { x, y, z }

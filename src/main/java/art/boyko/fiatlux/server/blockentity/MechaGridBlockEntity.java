@@ -6,9 +6,9 @@ import art.boyko.fiatlux.mechamodule.context.IModuleContext;
 import art.boyko.fiatlux.mechamodule.context.ModuleContext;
 import art.boyko.fiatlux.mechamodule.registry.ModuleRegistry;
 import art.boyko.fiatlux.mechamodule.capability.standard.EnergyCapability;
-import art.boyko.fiatlux.server.ecs.EcsManager;
-import art.boyko.fiatlux.server.ecs.RustEnergyBridge;
-import art.boyko.fiatlux.server.ecs.EnergyEventSystem;
+import art.boyko.fiatlux.ecs.EcsManager;
+import art.boyko.fiatlux.ecs.RustEnergyBridge;
+import art.boyko.fiatlux.ecs.EnergyEventSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -58,11 +58,19 @@ public class MechaGridBlockEntity extends BlockEntity {
     private final List<IModuleContext> tickingModules = new ArrayList<>();
     private final Map<IModuleContext, Integer> updateSchedule = new HashMap<>();
     private int currentTick = 0;
+    
+    // Rust ECS initialization tracking
+    private boolean rustEcsInitialized = false;
+    private boolean rustEcsAvailable = false;
 
     public MechaGridBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MECHA_GRID_BE.get(), pos, blockState);
         System.out.println("🏭 MechaGridBlockEntity CONSTRUCTOR CALLED at " + pos);
         initializeGrid();
+        
+        // 🚀 RUST ECS SEPARATION: Initialize Rust ECS world for full logic
+        // Defer Rust ECS registration until tick() when we know we're server-side
+        System.out.println("🚀 MechaGridBlockEntity: Constructor complete, Rust ECS will be initialized on first tick");
     }
 
     private void initializeGrid() {
@@ -88,34 +96,121 @@ public class MechaGridBlockEntity extends BlockEntity {
         
         currentTick++;
         
-        // Tick ECS world for this grid (Rust handles all energy logic)
-        EcsManager.tickWorld(worldPosition);
-        
-        // Process energy events from Rust ECS every few ticks
-        if (currentTick % 4 == 0) { // Sync with Rust batch processing interval
-            long worldId = EcsManager.getWorldId(worldPosition);
-            if (worldId != -1) {
-                // Synchronize energy events from Rust to Java
-                RustEnergyBridge.synchronizeEnergyEvents(worldId, worldPosition);
+        // Initialize Rust ECS on first server-side tick
+        if (!rustEcsInitialized) {
+            try {
+                RustEnergyBridge.registerWorldForSync(pos.getX(), pos.getY(), pos.getZ());
                 
-                // Log stats for monitoring (every 5 seconds)
-                if (currentTick % 100 == 0) {
-                    System.out.println("🕐 MechaGridBlockEntity.tick() - currentTick: " + currentTick);
-                    RustEnergyBridge.logTransferStats(worldId);
+                // Initialize sync manager for real-time updates
+                art.boyko.fiatlux.ecs.RustModuleManager.forceSyncAllModules(worldPosition);
+                
+                rustEcsAvailable = true;
+                rustEcsInitialized = true;
+                System.out.println("🚀 Successfully initialized Rust ECS for grid at " + pos);
+            } catch (UnsatisfiedLinkError e) {
+                System.err.println("⚠️ Rust ECS not available: " + e.getMessage());
+                System.err.println("📢 Running in fallback mode - logic will remain in Java");
+                rustEcsAvailable = false;
+                rustEcsInitialized = true; // Mark as initialized so we don't keep trying
+            } catch (Exception e) {
+                System.err.println("⚠️ Error initializing Rust ECS: " + e.getMessage());
+                System.err.println("📢 Running in fallback mode - logic will remain in Java");
+                rustEcsAvailable = false;
+                rustEcsInitialized = true;
+            }
+        }
+        
+        // 🚀 ALL LOGIC NOW IN RUST ECS - Java is just presentation layer!
+        // Tick Rust ECS world - this handles ALL module logic now
+        if (rustEcsAvailable) {
+            try {
+                if (currentTick % 20 == 0) { // Log once per second
+                    System.out.println("🚀 Ticking Rust ECS world at " + worldPosition + " (tick " + currentTick + ")");
+                }
+                art.boyko.fiatlux.ecs.RustModuleManager.tickWorldLogic(worldPosition);
+            } catch (UnsatisfiedLinkError e) {
+                // Fallback to Java logic if Rust call fails
+                System.err.println("⚠️ Rust ECS call failed, falling back to Java logic: " + e.getMessage());
+                rustEcsAvailable = false; // Disable further Rust calls
+                if (currentTick % 20 == 0) { // Once per second for non-critical operations
+                    processScheduledUpdates();
+                    tickModules();
+                }
+            }
+        } else {
+            // Fallback to Java logic if Rust is not available
+            if (currentTick % 20 == 0) { // Once per second for non-critical operations
+                System.out.println("⚠️ Running in Java fallback mode at " + worldPosition + " (tick " + currentTick + ")");
+                processScheduledUpdates();
+                tickModules();
+            }
+        }
+        
+        // SIMPLE FIX: Force sync every 5 ticks regardless of Rust sync detection
+        if (currentTick % 5 == 0) { // Every 5 ticks = 4 times per second (optimal for visual updates)
+            
+            System.out.println("🔄 Java: Forcing module cache update every 5 ticks for real-time sync");
+            
+            // ALWAYS update presentation layer from Rust data
+            updateJavaPresentationFromRust();
+            markDirty(); // ALWAYS force client update
+            
+            // Try to get sync data anyway (for debugging)
+            try {
+                long syncUpdates = art.boyko.fiatlux.ecs.RustModuleManager.retrieveSyncData(worldPosition);
+                if (syncUpdates > 0) {
+                    System.out.println("📤 Rust: Retrieved " + syncUpdates + " sync updates");
+                }
+            } catch (UnsatisfiedLinkError e) {
+                System.out.println("⚠️ Rust sync data not available, using forced updates");
+            }
+            
+            // Performance logging
+            if (currentTick % 100 == 0) {
+                System.out.println("🚀 Rust-powered grid at tick " + currentTick + " - forced sync every 5 ticks");
+            }
+        }
+        
+        // NO MORE JAVA MODULE TICKING - everything is in Rust now!
+        // Legacy code removed: processScheduledUpdates(), tickModules()
+
+        // Sync to client if visual state changed
+        if (isDirty) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            isDirty = false;
+        }
+    }
+    
+    /**
+     * Update Java presentation layer from Rust ECS data
+     * This syncs visual states without affecting logic
+     */
+    private void updateJavaPresentationFromRust() {
+        boolean hasVisualChanges = false;
+        
+        // Update each module's presentation state
+        for (int x = 0; x < GRID_SIZE; x++) {
+            for (int y = 0; y < GRID_SIZE; y++) {
+                for (int z = 0; z < GRID_SIZE; z++) {
+                    IMechaModule module = moduleGrid[x][y][z];
+                    if (module != null) {
+                        
+                        // CRITICAL FIX: Actually update cached data from Rust!
+                        if (module instanceof art.boyko.fiatlux.server.modules.test.RustBackedTestModule rustTest) {
+                            rustTest.forceCacheUpdateFromRust();
+                            hasVisualChanges = true;
+                        } else if (module instanceof art.boyko.fiatlux.server.modules.energy.RustBackedEnergyStorageModule rustStorage) {
+                            rustStorage.forceCacheUpdateFromRust(); 
+                            hasVisualChanges = true;
+                        }
+                    }
                 }
             }
         }
         
-        // Legacy module ticking (will be phased out as we move more to Rust)
-        if (currentTick % 20 == 0) { // Once per second for non-critical operations
-            processScheduledUpdates();
-            tickModules();
-        }
-
-        // Sync to client if dirty
-        if (isDirty) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            isDirty = false;
+        // Mark for client sync if visual state changed
+        if (hasVisualChanges) {
+            markDirty();
         }
     }
     
@@ -650,16 +745,18 @@ public class MechaGridBlockEntity extends BlockEntity {
      * Register or update module in Rust ECS when placed
      */
     private void registerModuleInEcs(int x, int y, int z, IMechaModule module) {
-        long worldId = EcsManager.getWorldId(worldPosition);
-        if (worldId != -1) {
-            // Determine module type for ECS
-            String ecsModuleType = determineEcsModuleType(module);
+        // Determine module type for ECS
+        String ecsModuleType = determineEcsModuleType(module);
+        System.out.println("🔧 Attempting to register module " + module.getModuleId() + " as type '" + ecsModuleType + "' at [" + x + "," + y + "," + z + "]");
+        
+        // Create entity in Rust ECS using the proper high-performance API
+        long entityId = art.boyko.fiatlux.ecs.RustModuleManager.createModuleAtPosition(
+            worldPosition, x, y, z, ecsModuleType);
             
-            // Spawn entity in Rust ECS
-            long entityId = EcsManager.getOrCreateWorld(worldPosition).spawnEntity(ecsModuleType, x, y, z);
-            if (entityId != -1) {
-                System.out.println("🦀 Registered module " + module.getModuleId() + " as ECS entity " + entityId);
-            }
+        if (entityId != -1) {
+            System.out.println("✅ Successfully registered module " + module.getModuleId() + " as ECS entity " + entityId);
+        } else {
+            System.err.println("❌ Failed to register module " + module.getModuleId() + " in Rust ECS");
         }
     }
     
@@ -680,13 +777,18 @@ public class MechaGridBlockEntity extends BlockEntity {
      */
     private String determineEcsModuleType(IMechaModule module) {
         String moduleId = module.getModuleId().getPath();
+        System.out.println("🔍 Mapping module ID '" + moduleId + "' to ECS type");
         return switch (moduleId) {
             case "energy_generator" -> "energy_generator";
             case "energy_storage" -> "energy_storage";
             case "test_energy_consumer" -> "energy_consumer";
+            case "test_module" -> "energy_consumer"; // Test module acts as energy consumer
             case "processor" -> "processor";
             case "display" -> "display";
-            default -> "default";
+            default -> {
+                System.out.println("⚠️ Unknown module type: " + moduleId + ", using 'energy_consumer' as fallback");
+                yield "energy_consumer"; // Default fallback with energy capability
+            }
         };
     }
 }

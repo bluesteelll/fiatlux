@@ -452,7 +452,7 @@ public class MechaGridBlock extends BaseEntityBlock {
                 mechaGrid.dropAllModules(level, pos);
                 
                 // Clean up ECS world
-                art.boyko.fiatlux.server.ecs.EcsManager.removeWorld(pos);
+                art.boyko.fiatlux.ecs.EcsManager.removeWorld(pos);
             }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);

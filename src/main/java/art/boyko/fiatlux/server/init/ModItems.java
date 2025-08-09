@@ -1,11 +1,11 @@
 package art.boyko.fiatlux.server.init;
 
 import art.boyko.fiatlux.server.FiatLux;
-import art.boyko.fiatlux.common.module.test.TestModuleItem;
-import art.boyko.fiatlux.common.module.EnergyGeneratorModuleItem;
-import art.boyko.fiatlux.common.module.EnergyStorageModuleItem;
-import art.boyko.fiatlux.common.module.ProcessorModuleItem;
-import art.boyko.fiatlux.common.module.DisplayModuleItem;
+import art.boyko.fiatlux.server.items.TestModuleItem;
+import art.boyko.fiatlux.server.items.EnergyGeneratorModuleItem;
+import art.boyko.fiatlux.server.items.EnergyStorageModuleItem;
+import art.boyko.fiatlux.server.items.ProcessorModuleItem;
+import art.boyko.fiatlux.server.items.DisplayModuleItem;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
